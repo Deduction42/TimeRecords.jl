@@ -8,6 +8,8 @@ Base.setindex!(ts::AbstractTimeSeries, ind) = setindex!(ts.records, ind)
 Base.size(ts::AbstractTimeSeries)           = (length(ts.records),)
 Base.firstindex(ts::AbstractTimeSeries)     = 1
 Base.lastindex(ts::AbstractTimeSeries)      = length(ts.records)
+Base.push!(ts::AbstractTimeSeries, r)       = push!(ts.records, r)
+Base.sort!(ts::AbstractTimeSeries)          = sort!(ts.records)
 
 recordtype(::Type{AbstractTimeSeries{T}}) where T = T
 recordtype(ts::AbstractTimeSeries{T}) where T = T
