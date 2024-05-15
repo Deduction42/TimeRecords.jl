@@ -1,0 +1,8 @@
+(1) Make the "time_average" fully depend on the "time_integrals" output
+    - We can change the "TimeSeries" output one element at a time (dividing by dt) in order to minimize allocations
+
+(2) Make the "time_integrals" less dependent on the total cumulative integral
+    - Reconstruct local cumulative integrals to interpolate
+        - Use the existing time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval) implementation which is efficient
+        - Consider adding an "indhint" argument to make it more efficient (with an indhint output)
+    - Modify the interpolated results by subtracting the first value

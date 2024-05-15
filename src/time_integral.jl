@@ -6,7 +6,7 @@ Time-weigted averages between the nodes of vt using either
 Timestamps in the resulting period refers to the END of the integral period, so the first element is always NaN
 """
 function time_averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-    ∫ts = interpolate(cumulative_integral(ts, order=order), vt, order=order)
+    ∫ts = interpolate(cumulative_integral(ts, order=order), vt, order=1)
     return TimeSeries(vt, [NaN; diff(values(∫ts))./diff(vt)])
 end
 
