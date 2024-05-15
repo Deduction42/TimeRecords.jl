@@ -5,9 +5,11 @@ recordtype(x::AbstractTimeRecord{T}) where T = T
 recordtype(::Type{<:AbstractTimeRecord{T}}) where T = T
 
 timestamp(x::AbstractTimeRecord) = x.t
-record(x::AbstractTimeRecord) = x.v
+value(x::AbstractTimeRecord) = x.v
+
+unixtime(x::AbstractTimeRecord) = x.t
 datetime(x::AbstractTimeRecord) = unix2datetime(timestamp(x))
-update_time(x::TR, t::Real) where TR<:AbstractTimeRecord  = TR(t, record(x))
+update_time(x::TR, t::Real) where TR<:AbstractTimeRecord  = TR(t, value(x))
 
 #Enable sorting by time
 Base.isless(r1::AbstractTimeRecord, r2::AbstractTimeRecord) = isless(r1.t, r2.t)

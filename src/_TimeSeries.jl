@@ -4,12 +4,23 @@
 abstract type AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}} end
 
 Base.getindex(ts::AbstractTimeSeries, ind)  = getindex(ts.records, ind)
-Base.setindex!(ts::AbstractTimeSeries, ind) = setindex!(ts.records, ind)
+Base.setindex!(ts::AbstractTimeSeries, x, ind) = setindex!(ts.records, x, ind)
 Base.size(ts::AbstractTimeSeries)           = (length(ts.records),)
 Base.firstindex(ts::AbstractTimeSeries)     = 1
 Base.lastindex(ts::AbstractTimeSeries)      = length(ts.records)
 Base.push!(ts::AbstractTimeSeries, r)       = push!(ts.records, r)
 Base.sort!(ts::AbstractTimeSeries)          = sort!(ts.records)
+Base.values(ts::AbstractTimeSeries)         = value.(ts.records)
+
+timestamps(ts::AbstractTimeSeries)          = timestamp.(ts.records)
+dropnan(ts::AbstractTimeSeries{<:Real})     = dropnan!(deepcopy(ts))
+
+function dropnan!(ts::AbstractTimeSeries{<:Real}) 
+    filter!(x->!isnan(value(x)), ts.records)
+    return ts
+end
+
+
 
 recordtype(::Type{AbstractTimeSeries{T}}) where T = T
 recordtype(ts::AbstractTimeSeries{T}) where T = T
@@ -58,6 +69,7 @@ Timeseries that contains a reference to the latest value accessed
     end
 end
 
+StatefulTimeSeries(ts::AbstractVector{TimeRecord{T}}) where T = StatefulTimeSeries{T}(ts, Ref(1))
 StatefulTimeSeries(ts::TimeSeries{T}) where T = StatefulTimeSeries{T}(ts.records, Ref(1), issorted=true)
 StatefulTimeSeries(t::AbstractVector{Real}, v::AbstractVector{T}) where T = StatefulTimeSeries(TimeSeries(t,v))
 

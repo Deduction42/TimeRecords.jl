@@ -1,4 +1,6 @@
 """
+interpolate(ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; order=0)
+
 Interpolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
 Returns an ordinary TimeSeries with timestamps at vt
 Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
@@ -13,12 +15,15 @@ function interpolate(ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; order=0
     end
 end
 
-"""
-Interpolates between two time records (r1, r2) at point t
-"""
+
 interpolate(rng::SVector{2,<:TimeRecord}, t::Real; order=0) = interpolate(rng[1], rng[2], t, order=order)
 interpolate(rng::NTuple{2,<:TimeRecord}, t::Real; order=0)  = interpolate(rng[1], rng[2], t, order=order)
 
+"""
+interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
+
+Interpolates between two time records (r1, r2) at point t
+"""
 function interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
     if order == 0
         return interp_lastval(r1, r2, t)
@@ -91,13 +96,13 @@ end
 function interp_lastval(r1::TimeRecord, r2::TimeRecord, t::Real)
     usefirst = t < timestamp(r2)
     r0 = ifelse(usefirst, r1, r2)
-    return TimeRecord(t, record(r0)*1.0)
+    return TimeRecord(t, value(r0)*1.0)
 end
 
 function interp_linear(r1::TimeRecord, r2::TimeRecord, t::Real)
     rng = (r1, r2)
     rt = timestamp.(rng)
-    rv = record.(rng)
+    rv = value.(rng)
     Δt = timestamp(rng[2]) - timestamp(rng[1])
     
     if iszero(Δt) #If times are identical just produce average
