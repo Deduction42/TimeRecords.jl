@@ -41,7 +41,7 @@ function Base.merge(vtr::TimeRecord...)
     T = promote_type(recordtype.(vtr)...)
     N = length(vtr)
 
-    return TimeRecord(vtr[1].t, SVector{N,T}(record.(vtr)...))
+    return TimeRecord(vtr[1].t, SVector{N,T}(value.(vtr)...))
 end
 
 

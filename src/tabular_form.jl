@@ -14,14 +14,38 @@ function tabular_form(seriesdict::AbstractDict{<:Any, TimeSeries{T}}; timestamp_
     return tabledict
 end
 
+
+"""
+Returns commmon timestamps for a collection of AbstractTimeSeries
+"""
 function timestamp_union(seriesitr)
     tsunion = Set{Float64}()
-    for tseries in seriesitr
-        union!(tsunion, (timstamp(tr) for tr in tseries))
+    for tseries in values(seriesitr)
+        union!(tsunion, (timestamp(tr) for tr in tseries))
     end
     return sort!(collect(tsunion)) 
 end
 
-function timestamp_union(seriesdict::AbstractDict{<:Any, <:TimeSeries})
-    return timestamp_union(values(seriesdict))
+
+"""
+Returns commmon timestamps for a set of AbstractTimeSeries
+"""
+function timestamp_union(vts::AbstractTimeSeries...)
+    return timestamp_union(vts)
 end
+
+# =======================================================================================
+# Merging functionality through interpolation
+# =======================================================================================
+"""
+Merges a set of timeseries to a common set of timestamps through interpolation
+Produces a StaticVector for each timestamp
+"""
+function Base.merge(vts::AbstractTimeSeries...; order=1)
+    t = timestamp_union(vts...)
+    ts_interp = map(ts->interpolate(ts,t, order=order), vts)
+    ts_merged = [merge(vtr...) for vtr in zip(ts_interp...)]
+    return TimeSeries(ts_merged)
+end
+
+

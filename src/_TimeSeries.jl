@@ -94,28 +94,4 @@ function take_next!(ts::StatefulTimeSeries)
 end
 
 
-# =======================================================================================
-# Merging functionality through interpolation
-# =======================================================================================
-"""
-Merges a set of timeseries to a common set of timestamps through interpolation
-"""
-function Base.merge(vts::AbstractTimeSeries...; order=1)
-    t = timestamp_union(vts...)
-    ts_interp = map(ts->interpolate(ts,t, order=order), vts)
-    ts_merged = [merge(vtr...) for vtr in zip(ts_interp...)]
-    return TimeSeries(ts_merged)
-end
 
-
-"""
-Returns commmon timestamps for a set of AbstractTimeSeries
-"""
-function timestamp_union(vts::AbstractTimeSeries...)
-    #May want to implement a more efficient method later
-    timeunion = Set{Float64}()
-    for ts in vts
-        union!(timeunion, timestamp(r) for r in ts)
-    end
-    return sort!(collect(timeunion)) 
-end
