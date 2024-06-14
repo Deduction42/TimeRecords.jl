@@ -3,7 +3,17 @@
 # =======================================================================================
 abstract type AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}} end
 
-Base.getindex(ts::AbstractTimeSeries, ind)  = getindex(ts.records, ind)
+#Indexing where sorting isn't an issue
+Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(ts.records, ind)
+Base.getindex(ts::T, ind::Colon) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
+Base.getindex(ts::T, ind::AbstractVector{Bool}) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
+Base.getindex(ts::T, ind::UnitRange) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
+
+#All other indexing where sorting may be an issue
+function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries 
+    return T(getindex(ts.records, ind), issorted=issorted(ind))
+end
+
 Base.setindex!(ts::AbstractTimeSeries, x, ind) = setindex!(ts.records, x, ind)
 Base.size(ts::AbstractTimeSeries)           = (length(ts.records),)
 Base.firstindex(ts::AbstractTimeSeries)     = 1
