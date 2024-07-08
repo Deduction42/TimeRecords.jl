@@ -1,6 +1,8 @@
 #=======================================================================================================================
 ToDo:
 (0) Create TimeSeriesView to represent views of timeseries
+     -  innerview(ts, Δt, indhint) should return a view of the timestamps between Δt[begin], Δt[end]
+     -  outerview(ts, Δt, indhint) should return a view of the timestamps that are just outside Δt[begin], Δt[end]
 (1) time_integral should have a basic function for AbstractTimeSeries (no bounds) like what we use for cumulative_integral
 (2) When time ranges are applied, find the inner view, integrate, and add the integrals of the extrapolated end values
 (3) time_average just divides the integral by the time difference
@@ -43,7 +45,8 @@ Timestamps in the resulting period refers to the END of the integral period, so 
 """
 function cumulative_integral(ts::AbstractTimeSeries{T}; order=1) where T
     #Calculate first integral to initialize the array
-    ∫ts1 = time_integral(ts[begin], ts[begin+1], order=order)
+    indhint = Ref(1)
+    ∫ts1 = time_integral(ts[begin], ts[begin+1], indhint, order=order)
     ∫ts  = zeros(typeof(∫ts1), length(ts))
     ∫ts[2] = ∫ts1
 
@@ -61,7 +64,7 @@ time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) where T <: 
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 """
-function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) where T <: Number
+function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=1) where T <: Number
     if Δt[end] < timestamp(ts[begin])
         @warn "Time interval (Δt) occurs completely before the timeseries history, results are likely inaccurate"
         return value(ts[begin])*diff(Δt)
@@ -71,21 +74,23 @@ function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) wh
         return value(ts[end])*diff(Δt)
     end
 
-    b1 = SVector{2}(clamp_bounds(ts, Δt[begin], 1))
-    bN = SVector{2}(clamp_bounds(ts, Δt[end], b1[end]))
+    b1 = SVector{2}(clamp_bounds(ts, Δt[begin], indhint))
+    bN = SVector{2}(clamp_bounds(ts, Δt[end], indhint))
 
     #extrapolate the outer boundaries and integrate them
     ts1  = extrapolate(ts[b1], Δt[begin], order=order)
     tsN  = extrapolate(ts[bN], Δt[end], order=order)
 
-    #Obtain the initial integration for the two extrapolated points
+    #Integrate the initial segment
     ∫ts  = time_integral(ts1, ts[b1[end]], order=order)
-    ∫ts += time_integral(ts[bN[begin]], tsN, order=order)
-
+    
     #Integrate the inner segments
     for ii in b1[end]:(bN[begin]-1)
-        ∫ts += time_integral(ts[ii], ts[ii+1])
+        ∫ts += time_integral(ts[ii], ts[ii+1], order=order)
     end
+
+    #Integrate the final segments
+    ∫ts += time_integral(ts[bN[begin]], tsN, order=order)
 
     return ∫ts
 end

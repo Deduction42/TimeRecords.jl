@@ -1,15 +1,7 @@
 #=======================================================================================================================
 ToDo:
-(1) findbounds should produce (Nothing, i₁) if query time is below range and (iₙ, Nothing) if above
-     -  this will eliminate all the "something" logic for a higher-level function to handle
-     -  clampbounds should replace Nothing with the other result
-     -  clampbounds on a timeseries result applies clampbounds to a findbounds result
-(2) Make interpolate produce "TimeRecord{t,missing}" if find_bounds has a Nothing
-(3) Make a new extrapolate function that uses integer_bounds(find_bounds)
 (4) Create "getindex" functions for timeseries that uses interpolation (by default) or extrapolation
      -  global settings should include: DEFAULT_ORDER, DEFAULT_INDEXER
-(5) indhint should be a Ref{Int64} so that "two_point_interp" can be eliminated
-     -  indhint=nothing should trigger a bisection search
 =======================================================================================================================#
 """
 extrapolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
