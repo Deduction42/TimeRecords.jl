@@ -1,6 +1,7 @@
 #=======================================================================================================================
 ToDo:
 (0) Create TimeSeriesView to represent views of timeseries
+     -  find_inner(ts, Δt, indhint) should return indices where Δt[begin] <= t <= Δt[end]
      -  innerview(ts, Δt, indhint) should return a view of the timestamps between Δt[begin], Δt[end]
      -  outerview(ts, Δt, indhint) should return a view of the timestamps that are just outside Δt[begin], Δt[end]
 (1) time_integral should have a basic function for AbstractTimeSeries (no bounds) like what we use for cumulative_integral
@@ -60,7 +61,7 @@ end
 
 
 """
-time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) where T <: Number
+time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=1) where T <: Number
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 """
