@@ -66,7 +66,10 @@ time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; ord
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 """
 function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=1) where T <: Number
-    if Δt[end] < timestamp(ts[begin])
+    if iszero(diff(Δt))
+        return zero(promote_type(T, Float64))
+        
+    elseif Δt[end] < timestamp(ts[begin])
         @warn "Time interval (Δt) occurs completely before the timeseries history, results are likely inaccurate"
         return value(ts[begin])*diff(Δt)
 
