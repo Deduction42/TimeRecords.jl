@@ -6,6 +6,8 @@ ToDo:
 (3) Make a new extrapolate function that uses integer_bounds(find_bounds)
 (4) Create "getindex" functions for timeseries that uses interpolation (by default) or extrapolation
      -  global settings should include: DEFAULT_ORDER, DEFAULT_INDEXER
+(5) indhint should be a Ref{Int64} so that "two_point_interp" can be eliminated
+     -  indhint=nothing should trigger a bisection search
 =======================================================================================================================#
 
 

@@ -1,3 +1,10 @@
+#=======================================================================================================================
+ToDo:
+(0) Create TimeSeriesView to represent views of timeseries
+(1) TimeIntegral should have a basic function for AbstractTimeSeries (no bounds)
+(2) Then time ranges are applied, add the three values
+=======================================================================================================================#
+
 """
 time_averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
 
