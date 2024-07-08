@@ -1,3 +1,14 @@
+#=======================================================================================================================
+ToDo:
+(1) find_bounds should produce (Nothing, i₁) if query time is below range and (iₙ, Nothing) if above
+     -  inner_bounds should replace Nothing with the other result
+(2) Make interpolate produce "TimeRecord{t,missing}" if find_bounds has a Nothing
+(3) Make a new extrapolate function that uses integer_bounds(find_bounds)
+(4) Create "getindex" functions for timeseries that uses interpolation (by default) or extrapolation
+     -  global settings should include: DEFAULT_ORDER, DEFAULT_INDEXER
+=======================================================================================================================#
+
+
 """
 interpolate(ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; order=0)
 
