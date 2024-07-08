@@ -1,8 +1,11 @@
 #=======================================================================================================================
 ToDo:
 (0) Create TimeSeriesView to represent views of timeseries
-(1) TimeIntegral should have a basic function for AbstractTimeSeries (no bounds)
-(2) Then time ranges are applied, add the three values
+(1) time_integral should have a basic function for AbstractTimeSeries (no bounds) like what we use for cumulative_integral
+(2) When time ranges are applied, find the inner view, integrate, and add the integrals of the extrapolated end values
+(3) time_average just divides the integral by the time difference
+(4) time_integral(...) and time_average(...) should allow passing indhint
+     -  time_integrals(...) and time_averages(...) should pass indhint
 =======================================================================================================================#
 
 """
@@ -13,7 +16,7 @@ Time-weigted averages between the nodes of vt using either
 Timestamps in the resulting period refers to the END of the integral period, so the first element is always NaN
 """
 function time_averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-    ∫ts = interpolate(cumulative_integral(ts, order=order), vt, order=1)
+    ∫ts = extrapolate(cumulative_integral(ts, order=order), vt, order=1)
     return TimeSeries(vt, [NaN; diff(values(∫ts))./diff(vt)])
 end
 
@@ -26,7 +29,7 @@ Time integrals between the nodes of vt using either
 Timestamps in the resulting period refers to the END of the integral period, so the first element is always 0
 """
 function time_integrals(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-    ∫ts = interpolate(cumulative_integral(ts, order=order), vt, order=1)
+    ∫ts = extrapolate(cumulative_integral(ts, order=order), vt, order=1)
     return TimeSeries(vt, [0; diff(values(∫ts))])
 end
 
@@ -68,14 +71,14 @@ function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) wh
         return value(ts[end])*diff(Δt)
     end
 
-    b1 = SVector{2}(find_bounds(ts, Δt[begin], 1))
-    bN = SVector{2}(find_bounds(ts, Δt[end], b1[end]))
+    b1 = SVector{2}(clamp_bounds(ts, Δt[begin], 1))
+    bN = SVector{2}(clamp_bounds(ts, Δt[end], b1[end]))
 
-    #Interpolate the outer boundaries and integrate them
-    ts1  = interpolate(ts[b1], Δt[begin], order=order)
-    tsN  = interpolate(ts[bN], Δt[end], order=order)
+    #extrapolate the outer boundaries and integrate them
+    ts1  = extrapolate(ts[b1], Δt[begin], order=order)
+    tsN  = extrapolate(ts[bN], Δt[end], order=order)
 
-    #Obtain the initial integration for the two interpolated points
+    #Obtain the initial integration for the two extrapolated points
     ∫ts  = time_integral(ts1, ts[b1[end]], order=order)
     ∫ts += time_integral(ts[bN[begin]], tsN, order=order)
 

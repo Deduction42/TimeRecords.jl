@@ -14,6 +14,8 @@ function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries
     return T(getindex(ts.records, ind), issorted=issorted(ind))
 end
 
+
+
 Base.setindex!(ts::AbstractTimeSeries, x, ind) = setindex!(ts.records, x, ind)
 Base.size(ts::AbstractTimeSeries)           = (length(ts.records),)
 Base.firstindex(ts::AbstractTimeSeries)     = 1
