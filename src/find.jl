@@ -1,56 +1,71 @@
 """
-find_inner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer)
+findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer)
 
-Finds the indices of the TimeSeries inside the time interval Δt::TimeInterval
+Finds the indices of the time series (ts) surrounding the time interval (Δt) or nearest (if Δt extends beyond (ts)) 
 """
-function find_inner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer)
-    inside_interval(x::TimeRecord)  = Δt[begin] <= timestamp(x) <= Δt[end]
-    outside_interval(x::TimeRecord) = !inside_interval(x)
+function findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer)
+    
+    after_begin_excl(x::TimeRecord)  = Δt[begin] < timestamp(x)
+    after_end_incl(x::TimeRecord)    = Δt[end] <= timestamp(x)
+    before_end_excl(x::TimeRecord)   = timestamp(x) < Δt[end]
+    before_begin_incl(x::TimeRecord) = timestamp(x) <= Δt[begin]
 
     ind0 = firstindex(ts)
     indN = lastindex(ts)
     indhint = clamp(indhint, ind0, indN)
     
     if timestamp(ts[indhint]) < Δt[begin] #Hint occurs before interval, walk forward to find it
-        indL = something(findnext(inside_interval, ts, indhint), indN+1)
-        indH = something(findnext(outside_interval, ts, indL), indN+1) - 1
+        indL = something(findnext(after_begin_excl, ts, indhint), indN+1) - 1
+        indH = something(findnext(after_end_incl, ts, indL), indN)
         return indL:indH
 
     elseif Δt[end] < timestamp(ts[indhint]) #Hint occurs after interval, walk backward to find it
-        indH = something(findprev(inside_interval, ts, indhint), ind0-1)
-        indL = something(findprev(outside_interval, ts, indH), ind0-1) + 1
+        indH = something(findprev(before_end_excl, ts, indhint), ind0-1) + 1
+        indL = something(findprev(before_begin_incl, ts, indH), ind0)
         return indL:indH
 
     else #Hint occurs inside interval walk backward to find lower, and walk forward to find uppper
-        indL = something(findprev(outside_interval, ts, indhint), ind0-1) + 1
-        indH = something(findnext(outside_interval, ts, indL), indN+1) - 1
+        indL = something(findprev(before_begin_incl, ts, indhint), ind0)
+        indH = something(findnext(after_end_incl, ts, indhint), indN)
         return indL:indH
     end
 end
 
-find_inner(ts::AbstractTimeSeries, Δt::TimeInterval) = find_inner(ts, Δt, firstindex(ts))
+findouter(ts::AbstractTimeSeries, Δt::TimeInterval) = findouter(ts, Δt, firstindex(ts))
 
 """
-find_inner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer)
+findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Base.RefValue{<:Integer})
 
-Finds the indices of the TimeSeries inside the time interval Δt::TimeInterval, 
+Finds the indices of the time series (ts) surrounding the time interval (Δt) or nearest (if Δt extends beyond (ts)) 
 Stores upper limit of result inside indhint for future reference
 """
-function find_inner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Base.RefValue{<:Integer})
-    inds = find_inner(ts, Δt, indhint[])
+function findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Base.RefValue{<:Integer})
+    inds = findouter(ts, Δt, indhint[])
     if length(inds) > 0
         indhint[] = inds[end]
     end
     return inds
 end
 
+"""
+findinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint)
+
+Finds the indices of the TimeSeries inside the time interval Δt::TimeInterval
+Stores upper limit of result inside indhint for future reference if indhint is a RefValue
+"""
+findinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint) = _findinner(findouter(ts, Δt, indhint))
+findinner(ts::AbstractTimeSeries, Δt::TimeInterval) = findinner(ts, Δt, firstindex(ts))
+
+_findinner(outer::UnitRange) = (outer[begin]+1):(outer[end]-1)
+
+
 
 """
-find_bounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)
+findbounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)
 
 Finds the index of the TimeRecord before and after t::Real; indhint is the first index searched for
 """
-function find_bounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)
+function findbounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)
     earlier_than_t(x::TimeRecord) = timestamp(x) <= t
     later_than_t(x::TimeRecord)   = timestamp(x) >= t
 
@@ -73,24 +88,24 @@ function find_bounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)
 end
 
 """
-find_bounds(ts::AbstractTimeSeries, t::Real, indhint::RefValue{<:Integer})
+findbounds(ts::AbstractTimeSeries, t::Real, indhint::RefValue{<:Integer})
 
 Finds the index of the TimeRecord before and after t::Real; indhint is the first index searched for
 The upper limit of the boundary is saved in indhint (unless it's nothing, then the lower boundary is saved)
 """
-function find_bounds(ts::AbstractTimeSeries, t::Real, indhint::Base.RefValue{<:Integer})
-    (lb, ub) = find_bounds(ts, t, indhint[])
+function findbounds(ts::AbstractTimeSeries, t::Real, indhint::Base.RefValue{<:Integer})
+    (lb, ub) = findbounds(ts, t, indhint[])
     indhint[] = something(ub, lb)
     return (lb, ub)
 end
 
 
 """
-find_bounds(ts::AbstractTimeSeries, t::Real)
+findbounds(ts::AbstractTimeSeries, t::Real)
 
 Finds bounding indices for timeseries (ts) at time (t) using a bisection method
 """
-function find_bounds(ts::AbstractTimeSeries, t::Real)
+function findbounds(ts::AbstractTimeSeries, t::Real)
     (lb, ub) = (firstindex(ts), lastindex(ts))
 
     if t < timestamp(ts[lb])
@@ -111,20 +126,20 @@ function find_bounds(ts::AbstractTimeSeries, t::Real)
     return (lb, ub)
 end
 
-find_bounds(ts::AbstractTimeSeries, t::Real, indhint::Nothing) = find_bounds(ts, t)
+findbounds(ts::AbstractTimeSeries, t::Real, indhint::Nothing) = findbounds(ts, t)
 
 """
-clamp_bounds(ts::AbstractTimeSeries, t::Real, indhint::RefValue{<:Integer})
+findnearest(ts::AbstractTimeSeries, t::Real, indhint::RefValue{<:Integer})
 
-Behaves like find_bounds except that it always returns integer boundaries within the timeseries bounds
+Behaves like findbounds except that it always returns integer boundaries within the timeseries bounds
 """
-clamp_bounds(ts::AbstractTimeSeries, t::Real, indhint) = clamp_bounds(find_bounds(ts, t, indhint))
+findnearest(ts::AbstractTimeSeries, t::Real, indhint) = clampbounds(findbounds(ts, t, indhint))
 
 """
-clamp_bounds(Tuple{Union{Integer,Nothing}, Union{Integer,Nothing}})
+findnearest(Tuple{Union{Integer,Nothing}, Union{Integer,Nothing}})
 
-Clamps the result of find_bounds so that Nothing is not inside the results
+Clamps the result of findbounds so that Nothing is not inside the results
 """
-clamp_bounds(t::Tuple{Nothing, <:Integer})   = (t[2],t[2])
-clamp_bounds(t::Tuple{<:Integer, Nothing})   = (t[1],t[1])
-clamp_bounds(t::Tuple{<:Integer, <:Integer}) = t
+clampbounds(t::Tuple{Nothing, <:Integer})   = (t[2],t[2])
+clampbounds(t::Tuple{<:Integer, Nothing})   = (t[1],t[1])
+clampbounds(t::Tuple{<:Integer, <:Integer}) = t

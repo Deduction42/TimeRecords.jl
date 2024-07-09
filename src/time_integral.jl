@@ -1,7 +1,7 @@
 #=======================================================================================================================
 ToDo:
 (0) Create TimeSeriesView to represent views of timeseries
-     -  find_inner(ts, Δt, indhint) should return indices where Δt[begin] <= t <= Δt[end]
+     -  findinner(ts, Δt, indhint) should return indices where Δt[begin] <= t <= Δt[end]
      -  innerview(ts, Δt, indhint) should return a view of the timestamps between Δt[begin], Δt[end]
      -  outerview(ts, Δt, indhint) should return a view of the timestamps that are just outside Δt[begin], Δt[end]
 (1) time_integral should have a basic function for AbstractTimeSeries (no bounds) like what we use for cumulative_integral
@@ -78,8 +78,8 @@ function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=not
         return value(ts[end])*diff(Δt)
     end
 
-    b1 = SVector{2}(clamp_bounds(ts, Δt[begin], indhint))
-    bN = SVector{2}(clamp_bounds(ts, Δt[end], indhint))
+    b1 = SVector{2}(findnearest(ts, Δt[begin], indhint))
+    bN = SVector{2}(findnearest(ts, Δt[end], indhint))
 
     #extrapolate the outer boundaries and integrate them
     ts1  = extrapolate(ts[b1], Δt[begin], order=order)

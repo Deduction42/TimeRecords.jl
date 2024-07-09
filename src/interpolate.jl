@@ -83,7 +83,7 @@ extrapolate(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{
 Single extrapolation at time t::Real, provide an indhint for faster searching
 """
 function extrapolate(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
-    (lb, ub) = clamp_bounds(ts, t, indhint)
+    (lb, ub) = findnearest(ts, t, indhint)
     return f_extrap(ts[lb], ts[ub], t)
 end
 
@@ -94,7 +94,7 @@ Single interpolation at time t::Real, provide an indhint for faster searching
 Will return TimeRecord{t, Missing} if t is not within the range of the timeseries
 """
 function interpolate(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
-    (lb, ub) = find_bounds(ts, t, indhint)
+    (lb, ub) = findbounds(ts, t, indhint)
     if isnothing(lb) | isnothing(ub)
         return TimeRecord(t, missing)
     else
