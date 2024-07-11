@@ -62,7 +62,21 @@ Constructs a time series from two vectors (unix timestamps, values)
 TimeSeries(v::AbstractVector{TimeRecord{T}}; issorted=false) where T = TimeSeries{T}(v, issorted=issorted)
 TimeSeries(t::AbstractVector{<:Real}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
 
+# =======================================================================================
+# Timeseries views
+# =======================================================================================
+"""
+View of a timeseries
+"""
+struct TimeSeriesView{T, P, I, LinIndex} <: AbstractTimeSeries{T}
+    records :: SubArray{TimeRecord{T}, 1, P, I, LinIndex}
+end
 
+Base.view(ts::AbstractTimeSeries, ind::Any) = error("View of AbstractTimeSeries can only be indexed by a UnitRange or AbstractVector{Bool}")
+Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(ts.records, ind))
+Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(ts.records, ind))
+
+#=
 # =======================================================================================
 # Stateful timeseries
 # =======================================================================================
@@ -95,5 +109,5 @@ function take_next!(ts::StatefulTimeSeries)
     return current_value(ts)
 end
 
-
+=#
 
