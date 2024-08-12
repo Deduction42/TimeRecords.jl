@@ -76,6 +76,32 @@ Base.view(ts::AbstractTimeSeries, ind::Any) = error("View of AbstractTimeSeries 
 Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(ts.records, ind))
 Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(ts.records, ind))
 
+
+# =======================================================================================
+# Merging functionality through extrapolation
+# =======================================================================================
+"""
+Merges a set of timeseries to a common set of timestamps through extrapolation
+Produces a StaticVector for each timestamp
+"""
+function Base.merge(t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=1)
+    ts_extrap = map(ts->extrapolate(ts,t, order=order), vts)
+    return _merge_records(ts_extrap...)
+end
+
+function Base.merge(f::Union{Function,Type}, t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=1)
+    ts_extrap = map(ts->extrapolate(ts,t, order=order), vts)
+    return _merge_records(f, ts_extrap...)
+end
+
+function _merge_records(f::Union{Function,Type}, uts::AbstractTimeSeries...)
+    return TimeSeries([merge(f, r...) for r in zip(uts...)])
+end
+
+function _merge_records(uts::AbstractTimeSeries...)
+    return TimeSeries([merge(r...) for r in zip(uts...)])
+end
+
 #=
 # =======================================================================================
 # Stateful timeseries

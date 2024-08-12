@@ -12,9 +12,9 @@ Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-
 """
 function extrapolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
     if order == 0
-        return extrapolate(extrapolate_lastval, ts, t)
+        return extrapolate(_extrapolate_lastval, ts, t)
     elseif order == 1
-        return extrapolate(extrapolate_linsat, ts, t)
+        return extrapolate(_extrapolate_linsat, ts, t)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
@@ -30,9 +30,9 @@ Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-
 """
 function interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
     if order == 0
-        return interpolate(extrapolate_lastval, ts, t)
+        return interpolate(_extrapolate_lastval, ts, t)
     elseif order == 1
-        return interpolate(extrapolate_linsat, ts, t)
+        return interpolate(_extrapolate_linsat, ts, t)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
@@ -45,9 +45,9 @@ Extrapolates from two time records (r1, r2) at point t using either zero-order h
 """
 function extrapolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
     if order == 0
-        return extrapolate_lastval(r1, r2, t)
+        return _extrapolate_lastval(r1, r2, t)
     elseif order == 1
-        return extrapolate_linsat(r1, r2, t)
+        return _extrapolate_linsat(r1, r2, t)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
@@ -109,13 +109,40 @@ end
 # =================================================================================================
 # Core two-point extrapolation algorithms
 # =================================================================================================
-function extrapolate_lastval(r1::TimeRecord, r2::TimeRecord, t::Real)
+function _extrapolate_lastval(r1::TimeRecord, r2::TimeRecord, t::Real)
     usefirst = t < timestamp(r2)
     rt = ifelse(usefirst, r1, r2)
     return TimeRecord(t, value(rt))
 end
 
-function extrapolate_linsat(r1::TimeRecord, r2::TimeRecord, t::Real)
+function _extrapolate_linsat(r1::TimeRecord, r2::TimeRecord, t::Real)
+    (w1, w2) = _linsat_weights(r1, r2, t)
+    vt =  w1*value(r1) + w2*value(r2)
+    return TimeRecord(t, vt)
+end
+
+function _extrapolate_linsat(r1::TimeRecord{<:Union{<:AbstractVector,<:Tuple}}, r2::TimeRecord{<:Union{<:AbstractVector,<:Tuple}}, t::Real) 
+    (w1, w2) = _linsat_weights(r1, r2, t)
+    vt = w1.*value(r1) .+ w2.*value(r2)
+    return TimeRecord(t, vt)
+end
+
+function _linsat_weights(r1::TimeRecord, r2::TimeRecord, t::Real)
+    t1 = timestamp(r1)
+    t2 = timestamp(r2)
+    Δt = t2-t1
+
+    if iszero(Δt) #If the timestamps are identical so make the weights 50-50
+        return (0.5, 0.5)
+    end
+
+    (w1, w2) = (t2-t, t-t1)./Δt
+    return clamp.((w1, w2), 0, 1)
+end
+
+
+#=
+function _extrapolate_linsat(r1::TimeRecord, r2::TimeRecord, t::Real)
     rng = (r1, r2)
     rt = timestamp.(rng)
     rv = value.(rng)
@@ -129,5 +156,5 @@ function extrapolate_linsat(r1::TimeRecord, r2::TimeRecord, t::Real)
     w_clamped = clamp.(w_raw, 0, 1)   #Clamp the weights so it doesn't extrapolate if r is outside
     return TimeRecord(t, sum(rv .* w_clamped)) 
 end
-
+=#
 
