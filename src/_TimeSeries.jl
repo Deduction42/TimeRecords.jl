@@ -14,6 +14,8 @@ function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries
     return T(getindex(ts.records, ind), issorted=issorted(ind))
 end
 
+
+
 Base.setindex!(ts::AbstractTimeSeries, x, ind) = setindex!(ts.records, x, ind)
 Base.size(ts::AbstractTimeSeries)           = (length(ts.records),)
 Base.firstindex(ts::AbstractTimeSeries)     = 1
@@ -60,7 +62,47 @@ Constructs a time series from two vectors (unix timestamps, values)
 TimeSeries(v::AbstractVector{TimeRecord{T}}; issorted=false) where T = TimeSeries{T}(v, issorted=issorted)
 TimeSeries(t::AbstractVector{<:Real}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
 
+# =======================================================================================
+# Timeseries views
+# =======================================================================================
+"""
+View of a timeseries
+"""
+struct TimeSeriesView{T, P, I, LinIndex} <: AbstractTimeSeries{T}
+    records :: SubArray{TimeRecord{T}, 1, P, I, LinIndex}
+end
 
+Base.view(ts::AbstractTimeSeries, ind::Any) = error("View of AbstractTimeSeries can only be indexed by a UnitRange or AbstractVector{Bool}")
+Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(ts.records, ind))
+Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(ts.records, ind))
+
+
+# =======================================================================================
+# Merging functionality through extrapolation
+# =======================================================================================
+"""
+Merges a set of timeseries to a common set of timestamps through extrapolation
+Produces a StaticVector for each timestamp
+"""
+function Base.merge(t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=1)
+    ts_extrap = map(ts->interpolate(ts,t, order=order), vts)
+    return _merge_records(ts_extrap...)
+end
+
+function Base.merge(f::Union{Function,Type}, t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=1)
+    ts_extrap = map(ts->interpolate(ts,t, order=order), vts)
+    return _merge_records(f, ts_extrap...)
+end
+
+function _merge_records(f::Union{Function,Type}, uts::AbstractTimeSeries...)
+    return TimeSeries([merge(f, r...) for r in zip(uts...)])
+end
+
+function _merge_records(uts::AbstractTimeSeries...)
+    return TimeSeries([merge(r...) for r in zip(uts...)])
+end
+
+#=
 # =======================================================================================
 # Stateful timeseries
 # =======================================================================================
@@ -93,5 +135,5 @@ function take_next!(ts::StatefulTimeSeries)
     return current_value(ts)
 end
 
-
+=#
 

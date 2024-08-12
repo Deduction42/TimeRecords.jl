@@ -34,18 +34,18 @@ function timestamp_union(vts::AbstractTimeSeries...)
     return timestamp_union(vts)
 end
 
-# =======================================================================================
-# Merging functionality through interpolation
-# =======================================================================================
+
 """
-Merges a set of timeseries to a common set of timestamps through interpolation
-Produces a StaticVector for each timestamp
+Merges a set of timeseries though timestamp union
 """
-function Base.merge(vts::AbstractTimeSeries...; order=1)
-    t = timestamp_union(vts...)
-    ts_interp = map(ts->interpolate(ts,t, order=order), vts)
-    ts_merged = [merge(vtr...) for vtr in zip(ts_interp...)]
-    return TimeSeries(ts_merged)
+function Base.merge(vts::AbstractTimeSeries...; order=1) 
+    return merge(timestamp_union(vts...), vts..., order=order)
 end
 
+"""
+Merges a set of timeseries though timestamp union, applying "f" to the merged result values
+"""
+function Base.merge(f::Union{Function,Type}, vts::AbstractTimeSeries...; order=1) 
+    return merge(f, timestamp_union(vts...), vts..., order=order)
+end
 

@@ -1,3 +1,16 @@
+#=======================================================================================================================
+ToDo:
+(0) Create TimeSeriesView to represent views of timeseries
+     -  findinner(ts, Δt, indhint) should return indices where Δt[begin] <= t <= Δt[end]
+     -  innerview(ts, Δt, indhint) should return a view of the timestamps between Δt[begin], Δt[end]
+     -  outerview(ts, Δt, indhint) should return a view of the timestamps that are just outside Δt[begin], Δt[end]
+(1) time_integral should have a basic function for AbstractTimeSeries (no bounds) like what we use for cumulative_integral
+(2) When time ranges are applied, find the inner view, integrate, and add the integrals of the extrapolated end values
+(3) time_average just divides the integral by the time difference
+(4) time_integral(...) and time_average(...) should allow passing indhint
+     -  time_integrals(...) and time_averages(...) should pass indhint
+=======================================================================================================================#
+
 """
 time_averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
 
@@ -47,12 +60,15 @@ end
 
 
 """
-time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) where T <: Number
+time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=1) where T <: Number
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 """
-function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) where T <: Number
-    if Δt[end] < timestamp(ts[begin])
+function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=1) where T <: Number
+    if iszero(diff(Δt))
+        return zero(promote_type(T, Float64))
+        
+    elseif Δt[end] < timestamp(ts[begin])
         @warn "Time interval (Δt) occurs completely before the timeseries history, results are likely inaccurate"
         return value(ts[begin])*diff(Δt)
 
@@ -61,21 +77,23 @@ function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval; order=1) wh
         return value(ts[end])*diff(Δt)
     end
 
-    b1 = SVector{2}(find_bounds(ts, Δt[begin], 1))
-    bN = SVector{2}(find_bounds(ts, Δt[end], b1[end]))
+    b1 = SVector{2}(findnearest(ts, Δt[begin], indhint))
+    bN = SVector{2}(findnearest(ts, Δt[end], indhint))
 
-    #Interpolate the outer boundaries and integrate them
+    #extrapolate the outer boundaries and integrate them
     ts1  = interpolate(ts[b1], Δt[begin], order=order)
     tsN  = interpolate(ts[bN], Δt[end], order=order)
 
-    #Obtain the initial integration for the two interpolated points
+    #Integrate the initial segment
     ∫ts  = time_integral(ts1, ts[b1[end]], order=order)
-    ∫ts += time_integral(ts[bN[begin]], tsN, order=order)
-
+    
     #Integrate the inner segments
     for ii in b1[end]:(bN[begin]-1)
-        ∫ts += time_integral(ts[ii], ts[ii+1])
+        ∫ts += time_integral(ts[ii], ts[ii+1], order=order)
     end
+
+    #Integrate the final segments
+    ∫ts += time_integral(ts[bN[begin]], tsN, order=order)
 
     return ∫ts
 end

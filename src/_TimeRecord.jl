@@ -28,20 +28,27 @@ Base.:+(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v+x)
 Base.:-(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v-x)
 Base.:*(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v*x)
 Base.:/(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v/x)
-
+Base.promote_rule(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{promote_rule(R1,R2)}
+Base.convert(::Type{TimeRecord{T}}, x::TimeRecord) where T = TimeRecord{T}(timestamp(x), convert(T,value(x)))
+Base.promote_typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.promote_typejoin(R1,R2)}
+Base.typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.typejoin(R1,R2)}
 
 """
-Merge multiple time record with the same timestamp into a single static vector
+Merge multiple time record with the same timestamp and apply the function "f" to the results
+"""
+function Base.merge(f::Union{Type,Function}, vtr::TimeRecord...)
+    mtr = merge(vtr...)
+    return TimeRecord(vtr[1].t, f(value(mtr)...))
+end 
+
+"""
+Merge multiple time records with the same timestamp as a tuple
 """
 function Base.merge(vtr::TimeRecord...)
     if !mapreduce(timestamp, isequal, vtr)
         error("Cannot merge time records for different timestamps")
     end
-    
-    T = promote_type(recordtype.(vtr)...)
-    N = length(vtr)
-
-    return TimeRecord(vtr[1].t, SVector{N,T}(value.(vtr)...))
+    return TimeRecord(vtr[begin].t, value.(vtr))
 end
 
 

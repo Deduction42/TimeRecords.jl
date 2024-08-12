@@ -1,105 +1,148 @@
+#=======================================================================================================================
+ToDo:
+(4) Create "getindex" functions for timeseries that uses interpolation (by default) or extrapolation
+     -  global settings should include: DEFAULT_ORDER, DEFAULT_INDEXER
+=======================================================================================================================#
 """
-interpolate(ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; order=0)
+interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
 
-Interpolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
+Extrapolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
 Returns an ordinary TimeSeries with timestamps at vt
 Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
 """
-function interpolate(ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; order=0)
+function interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
     if order == 0
-        return interpolate(interp_lastval, ts, vt)
+        return interpolate(_interpolate_lastval, ts, t)
     elseif order == 1
-        return interpolate(interp_linear, ts, vt)
+        return interpolate(_interpolate_linsat, ts, t)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
 end
 
 
-interpolate(rng::SVector{2,<:TimeRecord}, t::Real; order=0) = interpolate(rng[1], rng[2], t, order=order)
-interpolate(rng::NTuple{2,<:TimeRecord}, t::Real; order=0)  = interpolate(rng[1], rng[2], t, order=order)
+"""
+strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
+
+Interpolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
+Returns an ordinary TimeSeries with timestamps at vt
+Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
+"""
+function strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
+    if order == 0
+        return strictinterp(_interpolate_lastval, ts, t)
+    elseif order == 1
+        return strictinterp(_interpolate_linsat, ts, t)
+    else
+        error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
+    end
+end
 
 """
 interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
 
-Interpolates between two time records (r1, r2) at point t
+Extrapolates from two time records (r1, r2) at point t using either zero-order hold (order=0) or saturated-linear (order=1)
 """
 function interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
     if order == 0
-        return interp_lastval(r1, r2, t)
+        return _interpolate_lastval(r1, r2, t)
     elseif order == 1
-        return interp_linear(r1, r2, t)
+        return _interpolate_linsat(r1, r2, t)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
+end
+interpolate(rng::SVector{2,<:TimeRecord}, t::Real; order=0) = interpolate(rng[1], rng[2], t, order=order)
+interpolate(rng::NTuple{2,<:TimeRecord}, t::Real; order=0)  = interpolate(rng[1], rng[2], t, order=order)
+
+
+
+"""
+Extrapolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point algorithm
+Current two-point algorithms that are supported are zero-order-hold, first-order-interpolation
+"""
+function interpolate(f_extrap::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real})
+    indhint = Ref(1)    
+    vtr = map(t->interpolate(f_extrap, ts, t, indhint), sort(vt))
+    return TimeSeries(vtr, issorted=true)
 end
 
 """
 Interpolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point interpolation algorithm f_interp
 Current two-point algorithms that are supported are zero-order-hold, first-order-interpolation
 """
-function interpolate(f_interp::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real})
-    indhint = Ref(1)
-
-    function interp_for_time(t::Real)
-        itp = two_point_interp(f_interp, ts, t, indhint=indhint[])
-        indhint[] = itp.indhint
-        return itp.result
-    end
-    
-    vtr = [interp_for_time(t) for t in sort(vt)]
+function strictinterp(f_interp::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real})
+    indhint = Ref(1)    
+    vtr = map(t->strictinterp(f_interp, ts, t, indhint), sort(vt))
     return TimeSeries(vtr, issorted=true)
 end
 
 """
-Single interpolation at time t::Real, provide an indhint for faster searching
+interpolate(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{Nothing,Integer,<:RefValue{<:Integer}})
+
+Single extrapolation at time t::Real, provide an indhint for faster searching
 """
-function two_point_interp(f_interp::Function, ts::AbstractTimeSeries, t::Real; indhint=nothing)
-    (lb, ub) = find_bounds(ts, t, indhint)
-    return (
-        result  = f_interp(ts[lb], ts[ub], t), 
-        indhint = lb
-    )
+function interpolate(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
+    (lb, ub) = findnearest(ts, t, indhint)
+    return f_extrap(ts[lb], ts[ub], t)
+end
+
+"""
+strictinterp(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{Nothing,Integer,<:RefValue{<:Integer}})
+
+Single interpolation at time t::Real, provide an indhint for faster searching
+Will return TimeRecord{t, Missing} if t is not within the range of the timeseries
+"""
+function strictinterp(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
+    (lb, ub) = findbounds(ts, t, indhint)
+    if isnothing(lb) | isnothing(ub)
+        return TimeRecord(t, missing)
+    else
+        return f_extrap(ts[lb], ts[ub], t)
+    end
 end
 
 
 
-"""
-Finds the index of the TimeRecord before and after t::Real; indhint is the first index searched for
-"""
-function find_bounds(s::AbstractTimeSeries, t::Real, indhint)
-    earlier_than_t(x::TimeRecord) = timestamp(x) < t
-    later_than_t(x::TimeRecord) = timestamp(x) > t
+    
 
-    (ind1, indN) = (firstindex(s), lastindex(s))
+# =================================================================================================
+# Core two-point extrapolation algorithms
+# =================================================================================================
+function _interpolate_lastval(r1::TimeRecord, r2::TimeRecord, t::Real)
+    usefirst = t < timestamp(r2)
+    rt = ifelse(usefirst, r1, r2)
+    return TimeRecord(t, value(rt))
+end
 
-    indL = isnothing(indhint) ? ind1 : clamp(indhint, ind1, indN) #Lower bound index
-    indH = indL #Upper bound index
+function _interpolate_linsat(r1::TimeRecord, r2::TimeRecord, t::Real)
+    (w1, w2) = _linsat_weights(r1, r2, t)
+    vt =  w1*value(r1) + w2*value(r2)
+    return TimeRecord(t, vt)
+end
 
-    if later_than_t(s[indL]) #Walk backwards in time if indhint reccord occurs later
-        indL = something(findprev(earlier_than_t, s, indL), ind1-1)
-        indH = indL+1
-        
-    else #Walk forward in time if indhint reccord occurs earlier
-        indH = something(findnext(later_than_t, s, indL), indN+1)
-        indL = indH-1
+function _interpolate_linsat(r1::TimeRecord{<:Union{<:AbstractVector,<:Tuple}}, r2::TimeRecord{<:Union{<:AbstractVector,<:Tuple}}, t::Real) 
+    (w1, w2) = _linsat_weights(r1, r2, t)
+    vt = w1.*value(r1) .+ w2.*value(r2)
+    return TimeRecord(t, vt)
+end
+
+function _linsat_weights(r1::TimeRecord, r2::TimeRecord, t::Real)
+    t1 = timestamp(r1)
+    t2 = timestamp(r2)
+    Δt = t2-t1
+
+    if iszero(Δt) #If the timestamps are identical so make the weights 50-50
+        return (0.5, 0.5)
     end
 
-    #Previous code can go out of bounds, prevent out of bounds 
-    (indL, indH) = clamp.((indL,indH), ind1, indN)
-    return (indL, indH)
+    (w1, w2) = (t2-t, t-t1)./Δt
+    return clamp.((w1, w2), 0, 1)
 end
 
-# =================================================================================================
-# Core two-point interpolation algorithms
-# =================================================================================================
-function interp_lastval(r1::TimeRecord, r2::TimeRecord, t::Real)
-    usefirst = t < timestamp(r2)
-    r0 = ifelse(usefirst, r1, r2)
-    return TimeRecord(t, value(r0)*1.0)
-end
 
-function interp_linear(r1::TimeRecord, r2::TimeRecord, t::Real)
+#=
+function _interpolate_linsat(r1::TimeRecord, r2::TimeRecord, t::Real)
     rng = (r1, r2)
     rt = timestamp.(rng)
     rv = value.(rng)
@@ -113,5 +156,5 @@ function interp_linear(r1::TimeRecord, r2::TimeRecord, t::Real)
     w_clamped = clamp.(w_raw, 0, 1)   #Clamp the weights so it doesn't extrapolate if r is outside
     return TimeRecord(t, sum(rv .* w_clamped)) 
 end
-
+=#
 
