@@ -7,7 +7,7 @@ module TimeRecords
         TimeInterval, 
         TimeSeries, 
         interpolate,
-        extrapolate,
+        strictinterp,
         time_averages,
         time_integrals,
         cumulative_integral,

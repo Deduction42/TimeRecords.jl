@@ -85,12 +85,12 @@ Merges a set of timeseries to a common set of timestamps through extrapolation
 Produces a StaticVector for each timestamp
 """
 function Base.merge(t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=1)
-    ts_extrap = map(ts->extrapolate(ts,t, order=order), vts)
+    ts_extrap = map(ts->interpolate(ts,t, order=order), vts)
     return _merge_records(ts_extrap...)
 end
 
 function Base.merge(f::Union{Function,Type}, t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=1)
-    ts_extrap = map(ts->extrapolate(ts,t, order=order), vts)
+    ts_extrap = map(ts->interpolate(ts,t, order=order), vts)
     return _merge_records(f, ts_extrap...)
 end
 

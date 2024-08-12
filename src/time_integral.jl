@@ -19,7 +19,7 @@ Time-weigted averages between the nodes of vt using either
 Timestamps in the resulting period refers to the END of the integral period, so the first element is always NaN
 """
 function time_averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-    ∫ts = extrapolate(cumulative_integral(ts, order=order), vt, order=1)
+    ∫ts = interpolate(cumulative_integral(ts, order=order), vt, order=1)
     return TimeSeries(vt, [NaN; diff(values(∫ts))./diff(vt)])
 end
 
@@ -32,7 +32,7 @@ Time integrals between the nodes of vt using either
 Timestamps in the resulting period refers to the END of the integral period, so the first element is always 0
 """
 function time_integrals(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-    ∫ts = extrapolate(cumulative_integral(ts, order=order), vt, order=1)
+    ∫ts = interpolate(cumulative_integral(ts, order=order), vt, order=1)
     return TimeSeries(vt, [0; diff(values(∫ts))])
 end
 
@@ -82,8 +82,8 @@ function time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=not
     bN = SVector{2}(findnearest(ts, Δt[end], indhint))
 
     #extrapolate the outer boundaries and integrate them
-    ts1  = extrapolate(ts[b1], Δt[begin], order=order)
-    tsN  = extrapolate(ts[bN], Δt[end], order=order)
+    ts1  = interpolate(ts[b1], Δt[begin], order=order)
+    tsN  = interpolate(ts[bN], Δt[end], order=order)
 
     #Integrate the initial segment
     ∫ts  = time_integral(ts1, ts[b1[end]], order=order)
