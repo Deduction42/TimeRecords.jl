@@ -46,7 +46,6 @@ Timestamps in the resulting period refers to the END of the integral period, so 
 """
 function cumulative_integral(ts::AbstractTimeSeries{T}; order=1) where T
     #Calculate first integral to initialize the array
-    indhint = Ref(1)
     ∫ts1 = time_integral(ts[begin], ts[begin+1], order=order)
     ∫ts  = zeros(typeof(∫ts1), length(ts))
     ∫ts[2] = ∫ts1
