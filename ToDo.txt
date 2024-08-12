@@ -6,3 +6,7 @@
         - Use the existing time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval) implementation which is efficient
         - Consider adding an "indhint" argument to make it more efficient (with an indhint output)
     - Modify the interpolated results by subtracting the first value
+
+(3) Allow "merge" to make use of a splatable constructor function
+    - No constrcutor function should return a "Tuple"
+    - Tuple interpolation will need to broadcast math operators
