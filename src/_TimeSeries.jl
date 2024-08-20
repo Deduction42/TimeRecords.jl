@@ -37,6 +37,31 @@ end
 recordtype(::Type{AbstractTimeSeries{T}}) where T = T
 recordtype(ts::AbstractTimeSeries{T}) where T = T
 
+"""
+mapvalues(f, ts::AbstractTimeSeries) -> TimeSeries
+
+Maps callable "f" to each of the values in a timeseries, returns a TimeSeries with the same timestamps but modified values
+"""
+mapvalues(f, ts::AbstractTimeSeries)  = TimeSeries([TimeRecord(timestamp(r), f(value(r))) for r in ts], issorted=true)
+
+
+"""
+mapvalues!(f, ts::AbstractTimeSeries) -> ts
+
+Maps callable "f" to each of the values in ts, modifying it in-place. Output must be the same type as input
+"""
+function mapvalues!(f, ts::AbstractTimeSeries)
+    for ii in eachindex(ts)
+        ts[ii] = TimeRecord(timestamp(ts[ii]), f(value(ts[ii])))
+    end
+    return ts
+end
+
+"""
+TimeInterval(ts::AbstractTimeSeries)
+
+Creates a time interval based on the beginning and end of the timeseries
+"""
 TimeInterval(ts::AbstractTimeSeries) = TimeInterval(timestamp.((ts[begin],ts[end])))
 
 # =======================================================================================

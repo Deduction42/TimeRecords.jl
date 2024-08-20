@@ -19,5 +19,7 @@ module TimeRecords
         value,
         values,
         dropnan!,
-        dropnan
+        dropnan,
+        mapvalues,
+        mapvalues!
 end
