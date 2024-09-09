@@ -38,14 +38,14 @@ end
 """
 Merges a set of timeseries though timestamp union
 """
-function Base.merge(vts::AbstractTimeSeries...; order=1) 
+function Base.merge(vts::AbstractTimeSeries...; order=0) 
     return merge(timestamp_union(vts...), vts..., order=order)
 end
 
 """
 Merges a set of timeseries though timestamp union, applying "f" to the merged result values
 """
-function Base.merge(f::Union{Function,Type}, vts::AbstractTimeSeries...; order=1) 
+function Base.merge(f::Union{Function,Type}, vts::AbstractTimeSeries...; order=0) 
     return merge(f, timestamp_union(vts...), vts..., order=order)
 end
 

@@ -26,7 +26,7 @@ using StaticArrays
 
     #Test merging timeseries
     ts2 = TimeSeries([1.5, 2.6], [1.5, 2.6])
-    @test values(merge(SVector, ts, ts2)) ≈ [ 
+    @test values(merge(SVector, ts, ts2, order=1)) ≈ [ 
         SVector(1.0, 1.5),
         SVector(1.5, 1.5),
         SVector(2.0, 2.0),
