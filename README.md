@@ -1,5 +1,5 @@
-# time-records
-Data structure framework to support record-driven (row-wise) timeseries analysis operatios
+# TimeRecords
+Data structure framework to support record-driven (row-wise) timeseries analysis operatios allowing for easy interpolation, integration, merging and time-driven indexing.
 
 ## TimeRecord
 ```
