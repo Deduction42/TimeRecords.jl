@@ -8,6 +8,7 @@ Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(ts.records, ind)
 Base.getindex(ts::T, ind::Colon) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
 Base.getindex(ts::T, ind::AbstractVector{Bool}) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
 Base.getindex(ts::T, ind::UnitRange) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
+Base.getindex(ts::T, Δt::TimeInterval) where T <: AbstractTimeSeries = T(getindex(ts.records, findinner(ts, Δt)), issorted=true)
 
 #All other indexing where sorting may be an issue
 function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries 
@@ -86,6 +87,8 @@ Constructs a time series from two vectors (unix timestamps, values)
 """
 TimeSeries(v::AbstractVector{TimeRecord{T}}; issorted=false) where T = TimeSeries{T}(v, issorted=issorted)
 TimeSeries(t::AbstractVector{<:Real}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
+TimeSeries(t::AbstractVector{<:DateTime}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
+
 
 # =======================================================================================
 # Timeseries views
@@ -98,6 +101,7 @@ struct TimeSeriesView{T, P, I, LinIndex} <: AbstractTimeSeries{T}
 end
 
 Base.view(ts::AbstractTimeSeries, ind::Any) = error("View of AbstractTimeSeries can only be indexed by a UnitRange or AbstractVector{Bool}")
+Base.view(ts::AbstractTimeSeries, Δt::TimeInterval) = TimeSeriesView(view(ts.records, findinner(ts, Δt)))
 Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(ts.records, ind))
 Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(ts.records, ind))
 

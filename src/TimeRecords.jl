@@ -21,5 +21,12 @@ module TimeRecords
         dropnan!,
         dropnan,
         mapvalues,
-        mapvalues!
+        mapvalues!,
+        getinner,
+        getouter,
+        viewinner,
+        viewouter,
+        findinner,
+        findouter,
+        foundbounds
 end

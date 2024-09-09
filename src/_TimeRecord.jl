@@ -22,7 +22,9 @@ struct TimeRecord{T} <: AbstractTimeRecord{T}
     v :: T
 end
 
-TimeRecord(t::Real, v::T) where T = TimeRecord{T}(t, v)
+TimeRecord{T}(t::DateTime, v) where T = TimeRecord{T}(datetime2unix(t), v)
+TimeRecord(t::Union{Real,DateTime}, v::T) where T = TimeRecord{T}(t, v)
+
 
 Base.:+(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v+x)
 Base.:-(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v-x)
@@ -32,6 +34,8 @@ Base.promote_rule(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,
 Base.convert(::Type{TimeRecord{T}}, x::TimeRecord) where T = TimeRecord{T}(timestamp(x), convert(T,value(x)))
 Base.promote_typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.promote_typejoin(R1,R2)}
 Base.typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.typejoin(R1,R2)}
+
+Base.show(io::IO, tr::TimeRecord{T}) where T = print(io, "TimeRecord{$(T)}(t=$(unix2datetime(tr.t)), v=$(tr.v))")
 
 """
 Merge multiple time record with the same timestamp and apply the function "f" to the results
@@ -57,12 +61,17 @@ Define a time interval (where the lowest value is always first), useful for inte
 """
 struct TimeInterval <: AbstractVector{Float64}
     t :: SVector{2, Float64}
-    TimeInterval(x) = new(SVector{2,Float64}(extrema(x)...))
+    TimeInterval(x) = new(SVector{2,Float64}(_unixtime.(extrema(x))...))
 end
 
-TimeInterval(t1::Real, t2::Real) = TimeInterval((t1,t2))
-TimeInterval(r1::AbstractTimeRecord, r2::AbstractTimeRecord) = TimeInterval(timestamp(r1), timestamp(r2))
+Base.show(io::IO, Δt::TimeInterval) = print(io, "$(unix2datetime(Δt[begin])) => $(unix2datetime(Δt[end]))")
+Base.show(io::IO, mime::MIME"text/plain", Δt::TimeInterval) = Base.show(io::IO, Δt)
 
+_unixtime(t::Real) = Float64(t)
+_unixtime(t::DateTime) = datetime2unix(t)
+_unixtime(t::TimeRecord) = timestamp(t)
+
+TimeInterval(t1,t2) = TimeInterval(t1=>t2)
 
 Base.getindex(Δt::TimeInterval, ind::Colon)  = Δt.t
 Base.getindex(Δt::TimeInterval, ind)  = getindex(Δt.t, ind)
@@ -71,3 +80,4 @@ Base.firstindex(Δt::TimeInterval)     = 1
 Base.lastindex(Δt::TimeInterval)      = 2
 Base.diff(Δt::TimeInterval) = Δt.t[2] - Δt.t[1]
 
+Base.:+(dt::TimeInterval, x::Real) = TimeInterval(dt.t .+ x)
