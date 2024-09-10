@@ -69,10 +69,10 @@ Strict interpolation will return a missing value if outside the range.
 ## Integration
 The second major functionality supported is integration (and averaging). Integration can be done over a simple TimeInterval, or on a vector of timestamps (where n values will result in n-1 integration intervals).
 ```
-time_averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-time_integrals(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-cumulative_integral(ts::AbstractTimeSeries{T}; order=1) where T
-time_integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=1) where T <: Number
+average(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
+integral(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
+accumulate(ts::AbstractTimeSeries{T}; order=1) where T
+integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=1) where T <: Number
 ```
 ## Merging
 In many cases, it's desirable to have multivariate data where a full multivariate observation exists for every desired timestamp. However, it's often the case that different timestamps are available for different variables. The merging functionality finds the union of all timestamps and interpolates all timeseries, resulting in full multivariate observations for each timestamp. If desired timestamps are known, those can be provided. You can also provide a function to apply to the collection of observations (such as Vector, the default is Tuple)
