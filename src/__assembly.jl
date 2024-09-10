@@ -5,7 +5,7 @@ include(joinpath(@__DIR__, "_TimeRecord.jl"))
 include(joinpath(@__DIR__, "_TimeSeries.jl"))
 include(joinpath(@__DIR__, "find.jl"))
 include(joinpath(@__DIR__, "interpolate.jl"))
-include(joinpath(@__DIR__, "time_integral.jl"))
+include(joinpath(@__DIR__, "integrate.jl"))
 include(joinpath(@__DIR__, "tabular_form.jl"))
 
 #Testing time integrals
