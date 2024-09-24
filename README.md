@@ -1,5 +1,15 @@
 # TimeRecords
-Data structure framework to support record-driven (row-wise) timeseries analysis operatios allowing for easy interpolation, integration, merging and time-driven indexing.
+This package provides a data structure framework to support record-driven timeseries analysis operatios allowing for easy interpolation, integration, merging and time-driven indexing. The motivating principle behind this package is to make it easier to deal with situations where time series data arrives one record at a time, and where there are no guarantees about sampling intervals. 
+
+A common problem encountered is that most multivariate algorithms require complete observations for a given timestamp, but in many situations, data from different components are sampled at different times. The detailed interpolation, integration and time-based averaging methods in this package are built to deal with such situations. The basic building blocks of this package comprise of
+
+1. `TimeRecord{T}` (a value of type `T` with a timestamp attached)
+2. `AbstractTimeSeries{T}` (an `AbstractVector{TimeRecord{T}}` that is always sorted based on time)
+
+For multivariate observations, the recommended DataType is `SVector{N}`, but can consist of any custom object. However, some functionalities may be limited: 
+ - Zeroth-order tnterpolation supports`TimeSeries{T}` of any element type. 
+ - First-order interpolation requires the ability to add `T` and multiply `T` by floats. 
+ - Integration also requires supporting the method `zero(T)` which is why `Vector` may not be a great element choice
 
 ## TimeRecord
 ```
@@ -54,6 +64,11 @@ ts[TimeInterval(0=>3.1)]
     TimeRecord{Int64}(t=1970-01-01T00:00:02, v=2)
     TimeRecord{Int64}(t=1970-01-01T00:00:03, v=3)
 ```
+Some additional notes on TimeSeries
+-  `records(ts::AbstractTimeSeries)` will return normal vector, but be careful about mutating it because it could violate some 'sorted' assumptions
+-  `push!(ts::AbstractTimeSeries, r::TimeRecord)` will insert `r` into `ts` while maintaining chronological order
+-  `setindex(AbstractTimeSeries, x, ind)` will only set the value, not the timestamp (in order to guarantee sorting). If timestamps need to be altered, use `deleteat!(ts, ind)` then `push!(ts, r, indhint=ind)`
+
 
 ## Interpolation
 The first major functionality supported is interpolation. Supported interpolation methods are zero-order-hold (order=0) or linear (order=1). 

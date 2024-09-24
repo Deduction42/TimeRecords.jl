@@ -1,3 +1,5 @@
+include("integrate.jl")
+
 """
 Converts a dictionary of different timeseries into a tabular dictionary form where
     - All timestamps from each timeseries is collected under the key timestamp_label=:timestamp

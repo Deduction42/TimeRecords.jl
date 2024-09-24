@@ -5,7 +5,7 @@ using StaticArrays
 
 @testset "TimeRecords.jl" begin
     # Test time series
-    ts = TimeSeries([1,2,3,4,5],[1,2,3,4,5])
+    ts = TimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
 
     #Test extrapolation/interpolation
@@ -78,6 +78,6 @@ using StaticArrays
     @test getouter(ts, dt_middle+0.1) == ts[2:5]
     @test viewouter(ts, dt_middle+0.1) == ts[2:5]
 
-
+    
 
 end

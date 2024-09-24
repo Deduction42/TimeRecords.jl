@@ -1,3 +1,5 @@
+include("find.jl")
+
 #=======================================================================================================================
 ToDo:
 (4) Create "getindex" functions for timeseries that uses interpolation (by default) or extrapolation

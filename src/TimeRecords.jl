@@ -11,6 +11,7 @@ module TimeRecords
         average,
         integrate,
         accumulate,
+        records,
         timestamp,
         timestamps,
         datetime,
