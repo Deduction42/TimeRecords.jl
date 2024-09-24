@@ -6,10 +6,10 @@ A common problem encountered is that most multivariate algorithms require comple
 1. `TimeRecord{T}` (a value of type `T` with a timestamp attached)
 2. `AbstractTimeSeries{T}` (an `AbstractVector{TimeRecord{T}}` that is always sorted based on time)
 
-For multivariate observations, the recommended DataType is `SVector{N}`, but can consist of any custom object. However, some functionalities may be limited: 
+For multivariate observations, the recommended DataType for each element is `SVector{N}`, but elements can consist of any custom object. Nevertheless, functionality may be limited on certain datatypes: 
  - Zeroth-order tnterpolation supports`TimeSeries{T}` of any element type. 
  - First-order interpolation requires the ability to add `T` and multiply `T` by floats. 
- - Integration also requires supporting the method `zero(T)` which is why `Vector` may not be a great element choice
+ - Integration and averaging also requires supporting the method `zero(T)` which is why `Vector` may not be a great element choice
 
 ## TimeRecord
 ```
@@ -67,7 +67,8 @@ ts[TimeInterval(0=>3.1)]
 Some additional notes on TimeSeries
 -  `records(ts::AbstractTimeSeries)` will return normal vector, but be careful about mutating it because it could violate some 'sorted' assumptions
 -  `push!(ts::AbstractTimeSeries, r::TimeRecord)` will insert `r` into `ts` while maintaining chronological order
--  `setindex(AbstractTimeSeries, x, ind)` will only set the value, not the timestamp (in order to guarantee sorting). If timestamps need to be altered, use `deleteat!(ts, ind)` then `push!(ts, r, indhint=ind)`
+-  `setindex(AbstractTimeSeries, x, ind)` will only set the value, not the timestamp (in order to guarantee sorting). 
+-   If timestamps need to be altered, use `deleteat!(ts, ind)` then `push!(ts, r, indhint=ind)`
 
 
 ## Interpolation
