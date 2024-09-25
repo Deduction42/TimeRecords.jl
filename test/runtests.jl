@@ -47,6 +47,7 @@ using Dates
     dt_middle = TimeInterval(2, 4)
     dt_end    = TimeInterval(4, 6)
     dt_after  = TimeInterval(7, 9)
+    dt_between = TimeInterval(2.1, 2.2)
 
     @test findinner(ts, dt_before) == 1:0
     @test findinner(ts, dt_before+0.1) == 1:0
@@ -73,6 +74,9 @@ using Dates
     @test findouter(ts, dt_after)  == 5:5
     @test findouter(ts, dt_after+0.1) == 5:5
 
+    @test findinner(ts, dt_between) == 3:2
+    @test findouter(ts, dt_between) == 2:3
+
     @test getinner(ts, dt_middle) == ts[2:4]
     @test viewinner(ts, dt_middle) == ts[2:4]
     @test getouter(ts, dt_middle+0.1) == ts[2:5]
@@ -93,3 +97,4 @@ using Dates
     ts = TimeSeries(dates, 1:3)
     @test getouter(ts, interval) == ts[1:2]
 end
+
