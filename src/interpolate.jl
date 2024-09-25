@@ -85,7 +85,7 @@ interpolate(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{
 Single extrapolation at time t::Real, provide an indhint for faster searching
 """
 function interpolate(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
-    (lb, ub) = findnearest(ts, t, indhint)
+    (lb, ub) = clampedbounds(ts, t, indhint)
     return f_extrap(ts[lb], ts[ub], t)
 end
 

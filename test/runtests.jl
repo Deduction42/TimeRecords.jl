@@ -1,7 +1,7 @@
 using TimeRecords
 using Test
 using StaticArrays
-
+using DateTime
 
 @testset "TimeRecords.jl" begin
     # Test time series
@@ -88,4 +88,8 @@ using StaticArrays
     ts[1:3] = 1:3
     @test ts == TimeSeries{Float64}(1:5, 1:5)
 
+    interval = TimeInterval(DateTime("2024-01-01T00:00:48.928"),DateTime("2024-01-01T00:00:49.115"))
+    dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
+    ts = TimeSeries(dates, 1:3)
+    @test getouter(ts, interval) == ts[1:2]
 end
