@@ -1,7 +1,7 @@
 using TimeRecords
 using Test
 using StaticArrays
-using DateTime
+using Dates
 
 @testset "TimeRecords.jl" begin
     # Test time series
