@@ -78,6 +78,14 @@ using StaticArrays
     @test getouter(ts, dt_middle+0.1) == ts[2:5]
     @test viewouter(ts, dt_middle+0.1) == ts[2:5]
 
-    
+    @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
+    @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
+    @test keeplatest!(TimeSeries(1:5,1:5)) == TimeSeries([5],[5])
+
+    ts = TimeSeries{Float64}(1:5, 1:5)
+    ts[1:3] .= 0
+    @test ts == TimeSeries{Float64}(1:5, [0,0,0,4,5])
+    ts[1:3] = 1:3
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
 
 end

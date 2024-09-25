@@ -28,5 +28,6 @@ module TimeRecords
         viewouter,
         findinner,
         findouter,
-        foundbounds
+        foundbounds,
+        keeplatest!
 end
