@@ -107,15 +107,8 @@ function keeplatest!(ts::AbstractTimeSeries, t::Real)
 end
 keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2unix(t))
 
-"""
-clear!(ts::AbstractTimeSeries)
-
-Deletes all elements of an AbstractTimeSeries
-"""
-function clear!(ts::AbstractTimeSeries)
-    keepat!(records(ts), Int64[])
-    return ts 
-end
+Base.keepat!(ts::AbstractTimeSeries, inds)   = keepat!(records(ts), inds)
+Base.deleteat!(ts::AbstractTimeSeries, inds) = deleteat!(records(ts), inds)
 
 """
 mapvalues(f, ts::AbstractTimeSeries) -> TimeSeries
