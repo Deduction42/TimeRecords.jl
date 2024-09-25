@@ -50,6 +50,11 @@ function Base.deleteat!(ts::AbstractTimeSeries, ind)
     return ts
 end
 
+function Base.keepat!(ts::AbstractTimeSeries, inds)
+    keepat!(records(ts), inds)
+    return ts
+end
+
 Base.length(ts::AbstractTimeSeries)         = length(records(ts))
 Base.size(ts::AbstractTimeSeries)           = (length(records(ts)),)
 Base.firstindex(ts::AbstractTimeSeries)     = firstindex(records(ts))
@@ -107,8 +112,6 @@ function keeplatest!(ts::AbstractTimeSeries, t::Real)
 end
 keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2unix(t))
 
-Base.keepat!(ts::AbstractTimeSeries, inds)   = keepat!(records(ts), inds)
-Base.deleteat!(ts::AbstractTimeSeries, inds) = deleteat!(records(ts), inds)
 
 """
 mapvalues(f, ts::AbstractTimeSeries) -> TimeSeries
