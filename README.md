@@ -1,5 +1,20 @@
 # TimeRecords
-Data structure framework to support record-driven (row-wise) timeseries analysis operatios allowing for easy interpolation, integration, merging and time-driven indexing.
+A common problem encountered with timeseries analysis is that most multivariate algorithms require complete observations (all components) for a given timestamp, but in many situations, data from different components are sampled at different timestamps. This is particularly common with industrial historians and streaming IoT applications based on MQTT protocols or similar where data arrives one record at a time (in somewhat chronological order), from different devices at different sampling rates. This package matches the record-driven format common in these environments and supports common operations used to transform this data into formats commonly required by multivariate time series algorithms. As such, it is not a competitor to other time series packages like TimeSeries.jl, but complementary, providing operations that can transform record-driven data into formats they can use. These operations include:
+- Interpolation
+- Time-Weighted Integration
+- Time-Weighted Averaging
+- Merge-by-interpolation
+- Streaming data collection
+
+The basic building blocks of this package comprise of
+
+1. `TimeRecord{T}` (a value of type `T` with a timestamp attached)
+2. `AbstractTimeSeries{T}` (an `AbstractVector{TimeRecord{T}}` that is always sorted based on time)
+
+For multivariate observations, the recommended DataType for each element is `SVector{N}`, but elements can consist of any custom object. Nevertheless, functionality may be limited on certain datatypes: 
+ - Zeroth-order tnterpolation supports`TimeSeries{T}` of any element type. 
+ - First-order interpolation requires the ability to add `T` and multiply `T` by floats. 
+ - Integration and averaging also requires supporting the method `zero(T)` which is why `Vector` may not be a great element choice
 
 ## TimeRecord
 ```
@@ -8,7 +23,7 @@ struct TimeRecord{T} <: AbstractTimeRecord{T}
     v :: T
 end
 ```
-A wrapper that attaches a unix timestap to a value. Timestamps are stored internally as Float64.
+A wrapper that attaches a unix timestap to a value. Timestamps are stored internally as Float64 (enabling faster and easier numeric computations like intergrals) but are displayed as DateTime.
 ```
 tr = TimeRecord(0, 1.1)
 >> TimeRecord{Float64}(t=1970-01-01T00:00:00, v=1.1)
@@ -37,7 +52,7 @@ dt = TimeInterval(0, 5); dt = TimeInterval(0=>5)
 ```
 
 ## TimeSeries
-A vector of time records which among other things, supports indexing using time intervals.
+A vector of time records in chronological order, which among other things, supports indexing using time intervals.
 
 ```
 ts = TimeSeries([1,2,3,4,5],[1,2,3,4,5])
@@ -54,6 +69,12 @@ ts[TimeInterval(0=>3.1)]
     TimeRecord{Int64}(t=1970-01-01T00:00:02, v=2)
     TimeRecord{Int64}(t=1970-01-01T00:00:03, v=3)
 ```
+Some additional notes on TimeSeries
+-  `records(ts::AbstractTimeSeries)` will return normal vector, but care must be taken with mutation in order to prevent violating the inherent chronological assumptions of the TimeSeries
+-  `push!(ts::AbstractTimeSeries, r::TimeRecord)` will insert `r` into `ts` while maintaining chronological order
+-  `setindex(AbstractTimeSeries, x, ind)` will only set the value, not the timestamp (in order to guarantee sorting). 
+-   If timestamps need to be altered, use `deleteat!(ts, ind)` then `push!(ts, r, indhint=ind)`
+-   `ts[dt::TimeInterval]` will return any time series data points on or inside the time interval
 
 ## Interpolation
 The first major functionality supported is interpolation. Supported interpolation methods are zero-order-hold (order=0) or linear (order=1). 

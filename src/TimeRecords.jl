@@ -11,6 +11,7 @@ module TimeRecords
         average,
         integrate,
         accumulate,
+        records,
         timestamp,
         timestamps,
         datetime,
@@ -27,5 +28,8 @@ module TimeRecords
         viewouter,
         findinner,
         findouter,
-        foundbounds
+        findbounds,
+        clampedbounds,
+        extendedbounds,
+        keeplatest!
 end

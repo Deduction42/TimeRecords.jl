@@ -1,42 +1,121 @@
 # =======================================================================================
 # Abstract interface for timeseries
 # =======================================================================================
+include("_TimeRecord.jl")
+
+"""
+AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}}
+
+A sorted AbstractVector{TimeRecord{T}}, in ascending order by timestamp
+All children of AbstractTimeSeries must support the 'records(ts)' function
+By default, records(ts::AbstractTimeSeries) = ts.records
+"""
 abstract type AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}} end
 
+records(ts::AbstractTimeSeries)     = ts.records
+timestamps(ts::AbstractTimeSeries)  = timestamp.(records(ts))
+datetimes(ts::AbstractTimeSeries)   = datetime.(records(ts))  
+Base.values(ts::AbstractTimeSeries) = value.(records(ts))
+Base.Vector(ts::AbstractTimeSeries) = Vector(records(ts))
+
+Base.eltype(::Type{AbstractTimeSeries{T}}) where T = T
+Base.eltype(ts::AbstractTimeSeries{T}) where T = T
+
 #Indexing where sorting isn't an issue
-Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(ts.records, ind)
-Base.getindex(ts::T, ind::Colon) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
-Base.getindex(ts::T, ind::AbstractVector{Bool}) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
-Base.getindex(ts::T, ind::UnitRange) where T <: AbstractTimeSeries = T(getindex(ts.records, ind), issorted=true)
-Base.getindex(ts::T, Δt::TimeInterval) where T <: AbstractTimeSeries = T(getindex(ts.records, findinner(ts, Δt)), issorted=true)
+Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(records(ts), ind)
+Base.getindex(ts::T, ind::Colon) where T <: AbstractTimeSeries = T(getindex(records(ts), ind), issorted=true)
+Base.getindex(ts::T, ind::AbstractVector{Bool}) where T <: AbstractTimeSeries = T(getindex(records(ts), ind), issorted=true)
+Base.getindex(ts::T, ind::UnitRange) where T <: AbstractTimeSeries = T(getindex(records(ts), ind), issorted=true)
+Base.getindex(ts::T, Δt::TimeInterval) where T <: AbstractTimeSeries = T(getindex(records(ts), findinner(ts, Δt)), issorted=true)
 
 #All other indexing where sorting may be an issue
 function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries 
-    return T(getindex(ts.records, ind), issorted=issorted(ind))
+    return T(getindex(records(ts), ind), issorted=issorted(ind))
 end
 
+function Base.setindex!(ts::AbstractTimeSeries{T}, x, ind::Integer) where T 
+    setindex!(records(ts), TimeRecord(ts[ind].t, T(x)), ind)
+    return ts 
+end
 
-
-Base.setindex!(ts::AbstractTimeSeries, x, ind) = setindex!(ts.records, x, ind)
-Base.size(ts::AbstractTimeSeries)           = (length(ts.records),)
-Base.firstindex(ts::AbstractTimeSeries)     = 1
-Base.lastindex(ts::AbstractTimeSeries)      = length(ts.records)
-Base.push!(ts::AbstractTimeSeries, r)       = push!(ts.records, r)
-Base.sort!(ts::AbstractTimeSeries)          = sort!(ts.records)
-Base.values(ts::AbstractTimeSeries)         = value.(ts.records)
-
-timestamps(ts::AbstractTimeSeries)          = timestamp.(ts.records)
-dropnan(ts::AbstractTimeSeries{<:Real})     = dropnan!(deepcopy(ts))
-
-function dropnan!(ts::AbstractTimeSeries{<:Real}) 
-    filter!(x->!isnan(value(x)), ts.records)
+function Base.fill!(ts::AbstractTimeSeries, x)
+    for ii in eachindex(ts)
+        ts[ii] = x
+    end
     return ts
 end
 
+function Base.deleteat!(ts::AbstractTimeSeries, ind)
+    deleteat!(records(ts), ind)
+    return ts
+end
+
+Base.length(ts::AbstractTimeSeries)         = length(records(ts))
+Base.size(ts::AbstractTimeSeries)           = (length(records(ts)),)
+Base.firstindex(ts::AbstractTimeSeries)     = firstindex(records(ts))
+Base.lastindex(ts::AbstractTimeSeries)      = lastindex(records(ts))
+Base.sort!(ts::AbstractTimeSeries)          = sort!(records(ts))
 
 
-recordtype(::Type{AbstractTimeSeries{T}}) where T = T
-recordtype(ts::AbstractTimeSeries{T}) where T = T
+
+"""
+push!(ts::TimeSeries, tr::TimeRecord)
+
+Adds a TimeRecord (tr) to the TimeSeries(ts) by inserting it in order
+"""
+function Base.push!(ts::AbstractTimeSeries, tr::TimeRecord; indhint=nothing)
+    if isempty(records(ts)) || (ts[end] <= tr)
+        push!(records(ts), tr)
+    elseif (tr <= ts[begin])
+        pushfirst!(records(ts), tr)
+    else
+        bounds = findbounds(ts, timestamp(tr), indhint)
+        insert!(records(ts), bounds[end], tr)
+    end
+    return ts 
+end
+  
+dropnan(ts::AbstractTimeSeries{<:Real}) = dropnan!(deepcopy(ts))
+function dropnan!(ts::AbstractTimeSeries{<:Real}) 
+    filter!(x->!isnan(value(x)), records(ts))
+    return ts
+end
+
+"""
+keeplatest!(ts::AbstractTimeSeries)
+
+Delets all elements of 'ts' except the last one
+"""
+function keeplatest!(ts::AbstractTimeSeries)
+    keepat!(records(ts), length(records(ts)))
+    return ts
+end
+
+"""
+keeplatest!(ts::AbstractTimeSeries, t)
+
+Deletes all elements in 'ts' that occurs before 't' except the last one
+"""
+function keeplatest!(ts::AbstractTimeSeries, t::Real)
+    if isempty(ts)
+        return ts 
+    else
+        ind = searchsortedlast(ts, TimeRecord(t,ts[begin]))
+        keepat!(records(ts), max(ind, firstindex(ts)):lastindex(ts))
+        return ts
+    end
+end
+keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2unix(t))
+
+"""
+clear!(ts::AbstractTimeSeries)
+
+Deletes all elements of an AbstractTimeSeries
+"""
+function clear!(ts::AbstractTimeSeries)
+    keepat!(records(ts), Int64[])
+    return ts 
+end
 
 """
 mapvalues(f, ts::AbstractTimeSeries) -> TimeSeries
@@ -53,7 +132,7 @@ Maps callable "f" to each of the values in ts, modifying it in-place. Output mus
 """
 function mapvalues!(f, ts::AbstractTimeSeries)
     for ii in eachindex(ts)
-        ts[ii] = TimeRecord(timestamp(ts[ii]), f(value(ts[ii])))
+        ts[ii] = f(value(ts[ii]))
     end
     return ts
 end
@@ -88,7 +167,8 @@ Constructs a time series from two vectors (unix timestamps, values)
 TimeSeries(v::AbstractVector{TimeRecord{T}}; issorted=false) where T = TimeSeries{T}(v, issorted=issorted)
 TimeSeries(t::AbstractVector{<:Real}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
 TimeSeries(t::AbstractVector{<:DateTime}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
-
+TimeSeries{T}(t::AbstractVector, v::AbstractVector; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t,v), issorted=issorted)
+TimeSeries{T}() where T = TimeSeries{T}(TimeRecord{T}[], issorted=true)
 
 # =======================================================================================
 # Timeseries views
@@ -101,9 +181,9 @@ struct TimeSeriesView{T, P, I, LinIndex} <: AbstractTimeSeries{T}
 end
 
 Base.view(ts::AbstractTimeSeries, ind::Any) = error("View of AbstractTimeSeries can only be indexed by a UnitRange or AbstractVector{Bool}")
-Base.view(ts::AbstractTimeSeries, Δt::TimeInterval) = TimeSeriesView(view(ts.records, findinner(ts, Δt)))
-Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(ts.records, ind))
-Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(ts.records, ind))
+Base.view(ts::AbstractTimeSeries, Δt::TimeInterval) = TimeSeriesView(view(records(ts), findinner(ts, Δt)))
+Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(records(ts), ind))
+Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(records(ts), ind))
 
 
 # =======================================================================================
@@ -151,7 +231,7 @@ Timeseries that contains a reference to the latest value accessed
 end
 
 StatefulTimeSeries(ts::AbstractVector{TimeRecord{T}}) where T = StatefulTimeSeries{T}(ts, Ref(1))
-StatefulTimeSeries(ts::TimeSeries{T}) where T = StatefulTimeSeries{T}(ts.records, Ref(1), issorted=true)
+StatefulTimeSeries(ts::TimeSeries{T}) where T = StatefulTimeSeries{T}(records(ts), Ref(1), issorted=true)
 StatefulTimeSeries(t::AbstractVector{Real}, v::AbstractVector{T}) where T = StatefulTimeSeries(TimeSeries(t,v))
 
 current_value(ts::StatefulTimeSeries) = ts[ts.current[]]

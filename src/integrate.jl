@@ -1,3 +1,5 @@
+include("interpolate.jl")
+
 #=======================================================================================================================
 ToDo:
 (0) Create TimeSeriesView to represent views of timeseries
@@ -34,7 +36,7 @@ Timestamps in the resulting period refers to the END of each interval
 """
 function integrate(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Union{Real,DateTime}}; order=0) where T
     indhint = Ref(firstindex(ts))
-    ∫ts = zeros(promote_type(T, Float64), length(vt)-1)
+    ∫ts = fill(value(ts[begin])*0.0, length(vt)-1)
 
     for ii in firstindex(vt):(lastindex(vt)-1)
         Δt = TimeInterval(vt[ii], vt[ii+1])
@@ -53,7 +55,7 @@ Accumulate a timeseries over its time intervals, with the following order option
 This produces a new timeseries with N-1 entries stamped at the end of each interval
 """
 function Base.accumulate(ts::AbstractTimeSeries{T}; order=0) where T
-    ∫ts = zeros(promote_type(T, Float64), length(ts)-1)
+    ∫ts = fill(value(ts[begin])*0.0, length(ts)-1)
 
     for ii in firstindex(ts):(lastindex(ts)-1)
         ∫ti = ∫ts[max(ii-1, firstindex(ts))]
@@ -68,9 +70,9 @@ integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); 
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 """
-function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T <: Number
+function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T
     if iszero(diff(Δt))
-        return zero(promote_type(T, Float64))
+        return value(ts[begin])*0.0
         
     elseif Δt[end] < timestamp(ts[begin])
         @warn "Time interval (Δt) occurs completely before the timeseries history, results are likely inaccurate"
@@ -103,19 +105,23 @@ end
 
 
 """
-integrate(ts::AbstractTimeSeries{T}; order=0) where T <: Number
+integrate(ts::AbstractTimeSeries{T}; order=0) where T
 
 Integrate a timeseries using either a trapezoid method (order=1) or a flat method (order=0)
 """
-function integrate(ts::AbstractTimeSeries{T}; order=0) where T <: Number
-    ∫ts = zero(promote_type(T, Float64))
+function integrate(ts::AbstractTimeSeries{T}; order=0) where T
+    if isempty(ts)
+        return zero(T)*0.0
+    end
+
+    ∫ts = value(ts[begin])*0.0
     for ii in firstindex(ts):(lastindex(ts)-1)
         ∫ts += integrate(ts[ii], ts[ii+1], order=order)
     end
     return ∫ts
 end
 
-function integrate(r1::TimeRecord{<:Real}, r2::TimeRecord{<:Real}; order=0)
+function integrate(r1::TimeRecord, r2::TimeRecord; order=0)
     if order == 1
         return trapezoid_integral(r1, r2)
     elseif order ==0
@@ -128,11 +134,11 @@ end
 # ===================================================================================
 # Core integration methods
 # ===================================================================================
-function lastval_integral(r1::TimeRecord{<:Real}, r2::TimeRecord{<:Real})
+function lastval_integral(r1::TimeRecord, r2::TimeRecord)
     return value(r1)*diff(TimeInterval(r1, r2))
 end
 
-function trapezoid_integral(r1::TimeRecord{<:Real}, r2::TimeRecord{<:Real})
+function trapezoid_integral(r1::TimeRecord, r2::TimeRecord)
     μ = 0.5*(value(r1) + value(r2))
     return μ*diff(TimeInterval(r1, r2))
 end

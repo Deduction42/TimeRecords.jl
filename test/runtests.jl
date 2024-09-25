@@ -1,11 +1,11 @@
 using TimeRecords
 using Test
 using StaticArrays
-
+using Dates
 
 @testset "TimeRecords.jl" begin
     # Test time series
-    ts = TimeSeries([1,2,3,4,5],[1,2,3,4,5])
+    ts = TimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
 
     #Test extrapolation/interpolation
@@ -78,6 +78,18 @@ using StaticArrays
     @test getouter(ts, dt_middle+0.1) == ts[2:5]
     @test viewouter(ts, dt_middle+0.1) == ts[2:5]
 
+    @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
+    @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
+    @test keeplatest!(TimeSeries(1:5,1:5)) == TimeSeries([5],[5])
 
+    ts = TimeSeries{Float64}(1:5, 1:5)
+    ts[1:3] .= 0
+    @test ts == TimeSeries{Float64}(1:5, [0,0,0,4,5])
+    ts[1:3] = 1:3
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
 
+    interval = TimeInterval(DateTime("2024-01-01T00:00:48.928"),DateTime("2024-01-01T00:00:49.115"))
+    dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
+    ts = TimeSeries(dates, 1:3)
+    @test getouter(ts, interval) == ts[1:2]
 end
