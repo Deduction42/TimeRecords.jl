@@ -55,13 +55,11 @@ function Base.keepat!(ts::AbstractTimeSeries, inds)
     return ts
 end
 
-Base.length(ts::AbstractTimeSeries)         = length(records(ts))
-Base.size(ts::AbstractTimeSeries)           = (length(records(ts)),)
-Base.firstindex(ts::AbstractTimeSeries)     = firstindex(records(ts))
-Base.lastindex(ts::AbstractTimeSeries)      = lastindex(records(ts))
-Base.sort!(ts::AbstractTimeSeries)          = sort!(records(ts))
-
-
+Base.length(ts::AbstractTimeSeries)      = length(records(ts))
+Base.size(ts::AbstractTimeSeries)        = (length(records(ts)),)
+Base.firstindex(ts::AbstractTimeSeries)  = firstindex(records(ts))
+Base.lastindex(ts::AbstractTimeSeries)   = lastindex(records(ts))
+Base.sort!(ts::AbstractTimeSeries)       = sort!(records(ts))
 
 """
 push!(ts::TimeSeries, tr::TimeRecord)

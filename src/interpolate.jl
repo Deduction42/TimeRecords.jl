@@ -97,7 +97,7 @@ Will return TimeRecord{t, Missing} if t is not within the range of the timeserie
 """
 function strictinterp(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
     (lb, ub) = findbounds(ts, t, indhint)
-    if isnothing(lb) | isnothing(ub)
+    if !(checkbounds(Bool, ts, lb) & checkbounds(Bool, ts, ub))
         return TimeRecord(t, missing)
     else
         return f_extrap(ts[lb], ts[ub], t)
