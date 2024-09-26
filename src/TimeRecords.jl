@@ -30,6 +30,5 @@ module TimeRecords
         findouter,
         findbounds,
         clampedbounds,
-        extendedbounds,
         keeplatest!
 end
