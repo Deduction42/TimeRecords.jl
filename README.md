@@ -16,6 +16,12 @@ For multivariate observations, the recommended DataType for each element is `SVe
  - First-order interpolation requires the ability to add `T` and multiply `T` by floats. 
  - Integration and averaging also requires supporting the method `zero(T)` which is why `Vector` may not be a great element choice
 
+This package also includes a capstone datatype called `TimeSeriesCollector` which can be used to collect streaming data, organize it by label, and periodically send it as chunks to any function/algorithm with the following argument structure: 
+```
+f(data::Dict{String,TimeSeries{T}}, interval::TimeInterval) where T
+```
+This provides a convenient way to implement timeseries algorithms that interact with a message-based service like [MQTT](https://github.com/denglerchr/Mosquitto.jl) or [NATS](https://github.com/jakubwro/NATS.jl).
+
 ## TimeRecord
 ```
 struct TimeRecord{T} <: AbstractTimeRecord{T}
@@ -118,6 +124,38 @@ merge(SVector, ts, ts2)
     TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:03, v=[3.0, 2.6])
     TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:04, v=[4.0, 2.6])
     TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:05, v=[5.0, 2.6])
+```
 
+## TimeSeriesCollector
+A datatype that is used to collect tagged time record pairs `Pair{String, TimeRecord{T}}` and organize them as timeseries according to their labels.
+```
+@kwdef struct TimeSeriesCollector{T}
+    interval :: Millisecond
+    delay :: Millisecond
+    timer :: Base.RefValue{DateTime}  = Ref(floor(now(UTC), interval))
+    data  :: Dict{String, TimeSeries{T}} = Dict{String, TimeSeries{T}}()
+end
+```
+This structure has two main tuning parameters:
+1. `interval` the time interal in which data is chunked (cannot be negative); values of 0 will send data whenever the timestamp changes.
+2. `delay` how long the TimeSeriesCollector waits before sending data; because data typically doesn't arrive strictly in order, adding a delay gives some time for out-of-order records to arrive, reducing the risk of dropped data.
+
+This structure is meant to operate with the `apply!` function
+```
+apply!(collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord})
+```
+This function adds tagrecord to the collector, returning `nothing` if the timestamp isn't large enough to trigger the timer. If the timer is triggered, the function will return a snapshot of the dataset and an evaluation interval: `NamedTuple{snapshot<:Dict, interval::TimeInterval}`. Data returned in the snapshot is deleted from the collecter (except the latest value).
+
+This function can also be supplied with a callback function that gets called when a snapshot is produced
+```
+apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}) 
+```
+Here, `apply!(f, collector, tagrecord)` also produces `nothing` when the timer isn't triggered, but it if the timer is triggered the resulting data is fed to the callback function `f` in a spawned (multithreaded) Task which is returned.
+
+It is also possible to take data directly by supplying a timestamp instead of a time record.
+```
+take!(collector::TimeSeriesCollector, t::DateTime)
+```
+This behaves like `apply!` except no new records are added (only snapshots are returned and old data is deleted).
 
 
