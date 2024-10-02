@@ -6,6 +6,7 @@ module TimeRecords
         TimeRecord, 
         TimeInterval, 
         TimeSeries, 
+        TimeSeriesCollector,
         interpolate,
         strictinterp,
         average,
@@ -30,5 +31,7 @@ module TimeRecords
         findouter,
         findbounds,
         clampedbounds,
-        keeplatest!
+        keeplatest!,
+        apply!,
+        starttimer!
 end

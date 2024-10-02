@@ -1,7 +1,7 @@
 using StaticArrays
 using Dates
 
-include(joinpath(@__DIR__, "tabular_form.jl"))
+include(joinpath(@__DIR__, "_TimeSeriesCollector.jl"))
 
 #Testing time integrals
 #ts = TimeSeries(0:5, 0:5)

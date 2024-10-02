@@ -96,5 +96,91 @@ using Dates
     dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
     ts = TimeSeries(dates, 1:3)
     @test getouter(ts, interval) == ts[1:2]
+
+
+
+    #=========================================================================
+    TimeSeriesCollector tests
+    =========================================================================#
+    function as_tagged_series(d::Dict{String, TimeSeries{T}}) where T
+        taggedrecord(tag::String, tr::TimeRecord) = TimeRecord(timestamp(tr), (k=tag, v=value(tr)))
+        recordpair(tr::TimeRecord{<:NamedTuple{(:k,:v)}}) = value(tr).k => TimeRecord(timestamp(tr), value(tr).v)
+    
+        taggedseries = mapreduce(p->taggedrecord.(Ref(p[1]), records(p[2])), vcat, pairs(d))
+        sort!(taggedseries)
+    
+        return recordpair.(taggedseries)
+    end
+
+    for dt in (Millisecond(0), Millisecond(1000), Millisecond(2500))
+        for λt in (Millisecond(0), Millisecond(1), dt)
+            t0 = DateTime(2024,1,1,0,0,0)
+            t1 = DateTime(2024,1,1,0,1,0)
+            vt = datetime2unix.(t0:Second(1):t1)
+            dt = Millisecond(0)
+            λt = Millisecond(0)
+
+            function callback(data::Dict{String, TimeSeries{T}}, interval::TimeInterval) where T
+                return getinner(data, TimeInterval(interval[1], interval[2]-0.001))
+            end
+
+            pert = rand(length(vt)).*0
+            original = Dict(
+                "tag1" => TimeSeries(vt .+ pert, vt),
+                "tag2" => TimeSeries(vt .+ pert, vt)
+            )
+            dataseries = as_tagged_series(original)
+
+            
+            #Mismatch test
+            collector = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0+dt))
+            mismatches = Tuple{Dict{String,TimeSeries{Float64}}, Dict{String,TimeSeries{Float64}}}[]
+
+            for tagrecord in dataseries
+                result = take!(collector, datetime(tagrecord[2]))
+                push!(collector, tagrecord)
+                if !isnothing(result)
+                    y1 = getouter(result.snapshot, result.interval)
+                    y0 = getouter(original, result.interval)
+                    
+                    if iszero(λt) #When delay is zero, future values won't be accessible
+                        for (k,v) in pairs(y0)
+                            keepat!(records(v), 1:length(y1[k]))
+                        end
+                    end
+                    
+                    if y0 != y1
+                        push!(mismatches, (y0, y1))
+                    end
+                end
+            end
+            @test isempty(mismatches)
+
+            #Reconstruction test
+            collector = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0+dt))
+            reconstructed = Dict{String, TimeSeries{Float64}}()
+            for tagrecord in dataseries
+                result = apply!(callback, collector, tagrecord)
+                if !isnothing(result)
+                    data = fetch(result)
+                    for (k,v) in pairs(data)
+                        ts = get!(reconstructed, k) do 
+                            TimeSeries{Float64}()
+                        end
+                        append!(records(ts), v)
+                    end
+                end
+            end
+
+            anymismatches = Ref(false)
+            for (k, ts) in pairs(reconstructed)
+                mismatched = (ts != original[k][1:length(ts)])
+                anymismatches[] == anymismatches[] | mismatched
+            end
+            @test !anymismatches[]
+        end
+    end
+
+
 end
 
