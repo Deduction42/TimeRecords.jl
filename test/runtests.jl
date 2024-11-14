@@ -7,6 +7,7 @@ using Dates
     # Test time series
     ts = TimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
+    tse = TimeSeries{Float64}()
 
     #Test extrapolation/interpolation
     @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
@@ -81,6 +82,12 @@ using Dates
     @test viewinner(ts, dt_middle) == ts[2:4]
     @test getouter(ts, dt_middle+0.1) == ts[2:5]
     @test viewouter(ts, dt_middle+0.1) == ts[2:5]
+
+    @test findinner(tse, dt_middle) == 1:0
+    @test findouter(tse, dt_middle) == 1:0
+    @test getinner(tse, dt_middle)  == tse[1:0]
+    @test getouter(tse, dt_middle)  == tse[1:0]
+    
 
     @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
     @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
