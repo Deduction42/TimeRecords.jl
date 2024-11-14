@@ -92,6 +92,8 @@ using Dates
     @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
     @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
     @test keeplatest!(TimeSeries(1:5,1:5)) == TimeSeries([5],[5])
+    @test keeplatest!(TimeSeries{Float64}()) == TimeSeries{Float64}()
+    @test keeplatest!(TimeSeries{Float64}(), 4) == TimeSeries{Float64}()
 
     ts = TimeSeries{Float64}(1:5, 1:5)
     ts[1:3] .= 0
