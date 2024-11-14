@@ -90,8 +90,12 @@ keeplatest!(ts::AbstractTimeSeries)
 Delets all elements of 'ts' except the last one
 """
 function keeplatest!(ts::AbstractTimeSeries)
-    keepat!(records(ts), length(records(ts)))
-    return ts
+    if isempty(ts)
+        return ts
+    else
+        keepat!(records(ts), length(records(ts)))
+        return ts
+    end
 end
 
 """
