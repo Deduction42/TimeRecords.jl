@@ -24,6 +24,10 @@ findinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer=firstindex
 Finds the indices of the time series (ts) where Δt[begin] <= ts.t <= Δt[end]) 
 """
 function findinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=nothing)
+    if isempty(ts)
+        return 1:0
+    end
+    
     bndL = findbounds(ts, Δt[begin], indhint)
     lb = ifelse(_equal_timestamp(ts, bndL[1], Δt[begin]), bndL[1], bndL[2])
 
@@ -56,6 +60,10 @@ Finds the indices of the TimeSeries ts that surround the time interval Δt,
 If Δt is outside the time range both results will be the nearest index
 """
 function findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=nothing)
+    if isempty(ts)
+        return 1:0
+    end
+
     bndL = clampedbounds(ts, Δt[begin], indhint)
     lb = ifelse(_equal_timestamp(ts, bndL[2], Δt[begin]), bndL[2], bndL[1])
 
