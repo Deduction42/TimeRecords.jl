@@ -75,12 +75,13 @@ ts[TimeInterval(0=>3.1)]
     TimeRecord{Int64}(t=1970-01-01T00:00:02, v=2)
     TimeRecord{Int64}(t=1970-01-01T00:00:03, v=3)
 ```
-Some additional notes on TimeSeries
--  `records(ts::AbstractTimeSeries)` will return normal vector, but care must be taken with mutation in order to prevent violating the inherent chronological assumptions of the TimeSeries
+Some additional notes on TimeSeries and its chronological API
+-  `ts[dt::TimeInterval]` will return any time series data points on or inside the time interval
 -  `push!(ts::AbstractTimeSeries, r::TimeRecord)` will insert `r` into `ts` while maintaining chronological order
--  `setindex(AbstractTimeSeries, x, ind)` will only set the value, not the timestamp (in order to guarantee sorting). 
--   If timestamps need to be altered, use `deleteat!(ts, ind)` then `push!(ts, r, indhint=ind)`
--   `ts[dt::TimeInterval]` will return any time series data points on or inside the time interval
+-  `setindex(ts::AbstractTimeSeries, x::Any, ind)` will only overwrite the value, keeping the timestamp the same 
+-  `setindex(ts::AbstractTimeSeries, r::TimeRecord, ind)` replaces the value if the timestamps are equal, otherwise it uses `deleteat!(ts, ind)` then `push!(ts, r, indhint=ind)` (in order to guarantees sorting)
+-  `setindex(ts::AbstractTimeSeries, vr::AbstractVector{TimeRecord}, ind)` overwrites values in `records(ts)` and then sorts
+-  `records(ts::AbstractTimeSeries)` will return the internal timeseries vector, but care must be taken with mutation in order to prevent violating the inherent chronological assumptions of the TimeSeries
 
 ## Interpolation
 The first major functionality supported is interpolation. Supported interpolation methods are zero-order-hold (order=0) or linear (order=1). 
