@@ -33,9 +33,39 @@ function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries
     return T(getindex(records(ts), ind), issorted=issorted(ind))
 end
 
+#Set index basesd on value only (maintains the same timestamp to guarantee sorting)
 function Base.setindex!(ts::AbstractTimeSeries{T}, x, ind::Integer) where T 
-    setindex!(records(ts), TimeRecord(ts[ind].t, T(x)), ind)
+    setindex!(records(ts), TimeRecord(timestamp(ts[ind]), T(x)), ind)
     return ts 
+end
+
+#Sets multiple indices based on value only
+function Base.setindex!(ts::AbstractTimeSeries{T}, X::AbstractArray, inds::AbstractVector) where T
+    Base.setindex_shape_check(X, length(inds))
+    ix0 = firstindex(X)
+    for (count, ind) in enumerate(inds)
+        x = T(X[ix0+count-1])
+        setindex!(records(ts), TimeRecord(timestamp(ts[ind]), x), ind)
+    end
+    return ts 
+end
+
+#Set index checks for timestamp equality, but other wise deletes element [i] and uses that as the inertion hint
+function Base.setindex!(ts::AbstractTimeSeries{T}, r::TimeRecord, ind::Integer) where T
+    if timestamp(r) == timestamp(ts[ind])
+        setindex!(records(ts), r, ind)
+    else
+        deleteat!(ts, ind)
+        push!(ts, r, indhint=ind)
+    end
+    return ts
+end
+
+#Set multiple indices and then sort the timeseries
+function Base.setindex!(ts::AbstractTimeSeries{T}, vr::AbstractVector{<:TimeRecord}, ind::AbstractVector) where T
+    setindex!(records(ts), vr, ind)
+    sort!(ts)
+    return ts
 end
 
 function Base.fill!(ts::AbstractTimeSeries, x)
