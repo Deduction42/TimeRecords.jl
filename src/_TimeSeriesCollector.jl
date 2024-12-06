@@ -54,6 +54,29 @@ function apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:S
 end
 
 """
+apply!(f::Function, collector::TimeSeriesCollector, t::DateTime) :: Union{Nothing, Task}
+
+Uses take!(collector, t) :: Union{Nothing, NamedTuple{snapshot<:Dict, interval::TimeInterval}}
+ -  If data is returned (i.e. not 'nothing') collector.data before collector.timer[] will be deleted
+ -  The function 'f' will be applied to 'data.snapshot, data.interval' in a separate 'Task' which is returned
+
+Notes:
+ -  The function f must accept two arguments: (data::Dict{String,<:TimeSereis}, interval::TimeInterval)
+ -  'interval' will be contained inside 'data' allowing for any desired interpolation scheme
+"""
+
+function apply!(f::Function, collector::TimeSeriesCollector, t::DateTime)
+    data = take!(collector, t)
+    if isnothing(data)
+        return nothing
+    else
+        return Threads.@spawn f(data.snapshot, data.interval)
+    end
+end
+
+
+
+"""
 apply!(collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}) :: Union{Nothing, NamedTuple{snapshot<:Dict, interval::TimeInterval}}
 
 Use 'take!(collector, timestamp(tagrecord[2]))' which returns 'Union{Nothing, NamedTuple{snapshot<:Dict, interval::TimeInterval}}'
@@ -93,7 +116,7 @@ function Base.take!(collector::TimeSeriesCollector, t::DateTime)
         #Collect data that spans the time interval
         snapshot = getouter(collector.data, interval)
 
-        #Delete unneded data
+        #Delete unneeded data
         for v in values(collector.data)
             keeplatest!(v, t1)
         end
