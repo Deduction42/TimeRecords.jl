@@ -141,18 +141,20 @@ using Dates
         return recordpair.(taggedseries)
     end
 
+    function callback(data::Dict{String, TimeSeries{T}}, interval::TimeInterval) where T
+        return getinner(data, TimeInterval(interval[1], interval[2]))
+    end
+
     for dt in (Millisecond(0), Millisecond(1000), Millisecond(2500))
         for λt in (Millisecond(0), Millisecond(1), dt)
-            display((interval=dt, delay=λt))
+            #dt = Millisecond(0)
+            #λt = Millisecond(1)
+            #display((interval=dt, delay=λt))
+
             t0 = DateTime(2024,1,1,0,0,0)
             t1 = DateTime(2024,1,1,0,1,0)
             vt = datetime2unix.(t0:Second(1):t1)
-            dt = Millisecond(0)
-            λt = Millisecond(0)
-
-            function callback(data::Dict{String, TimeSeries{T}}, interval::TimeInterval) where T
-                return getinner(data, TimeInterval(interval[1], interval[2]))
-            end
+            
 
             pert = rand(length(vt)).*0
             original = Dict(
@@ -163,7 +165,7 @@ using Dates
 
             
             #Mismatch test
-            collector = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0+dt))
+            collector  = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0+dt))
             mismatches = Tuple{Dict{String,TimeSeries{Float64}}, Dict{String,TimeSeries{Float64}}}[]
 
             for tagrecord in dataseries
@@ -183,13 +185,16 @@ using Dates
                     end
                 end
             end
+            if !isempty(mismatches)
+                @warn "Test failed at $((interval=dt, delay=λt))"
+            end
             @test isempty(mismatches)
 
             #Reconstruction test
             collector = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0+dt))
             reconstructed = Dict{String, TimeSeries{Float64}}()
             for tagrecord in dataseries
-                result = apply!(callback, collector, tagrecord)
+                result = apply!(getinner, collector, tagrecord)
                 if !isnothing(result)
                     data = fetch(result)
                     for (k,v) in pairs(data)
@@ -203,13 +208,15 @@ using Dates
 
             anymismatches = Ref(false)
             for (k, ts) in pairs(reconstructed)
-                mismatched = (ts != original[k][1:length(ts)])
+                n = min(length(original[k]), length(ts))
+                mismatched = (ts != original[k][1:n])
                 anymismatches[] == anymismatches[] | mismatched
+            end
+            if anymismatches[]
+                @info "Test failed at $((interval=dt, delay=λt))"
             end
             @test !anymismatches[]
         end
     end
-
-
 end
 

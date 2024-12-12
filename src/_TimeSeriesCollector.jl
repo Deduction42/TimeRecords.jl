@@ -11,7 +11,7 @@ Used to collect tagged time records Pair{String=>TimeRecord{T}} arriving mostly 
         when set to zero, the interval will be the distance between timestamps
  -  'delay' is the amount of time we wait beyond the interval to collect data. 
         This helps make algorithms robust against slightly out-of-order data
- -  'timer' is a DateTime reference that indicates when the end of the next interval is due (will wait for 'delay') before collecting
+ -  'timer' is a DateTime reference that indicates the beginning of the next collection interval
  -  'data' is a Dict of TimeSeries that stores collected data. 
 """
 @kwdef struct TimeSeriesCollector{T}
@@ -156,7 +156,7 @@ Calculates the beginning of the next time interval given the current time
 """
 function next_interval_start(collector::TimeSeriesCollector, current::DateTime)
     rawstart = current - collector.delay - collector.interval
-    newstart = iszero(collector.interval) ? rawstart : floor(rawstart, collector.interval)
+    newstart = iszero(collector.interval) ? rawstart : ceil(rawstart, collector.interval)-collector.interval
     return max(collector.timer[], newstart)
 end
 
