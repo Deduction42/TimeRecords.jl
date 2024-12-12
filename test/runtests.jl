@@ -141,17 +141,20 @@ using Dates
         return recordpair.(taggedseries)
     end
 
+    function callback(data::Dict{String, TimeSeries{T}}, interval::TimeInterval) where T
+        return getinner(data, TimeInterval(interval[1], interval[2]-1e-6))
+    end
+
     for dt in (Millisecond(0), Millisecond(1000), Millisecond(2500))
         for λt in (Millisecond(0), Millisecond(1), dt)
+            #dt = Millisecond(0)
+            #λt = Millisecond(1)
+            display((interval=dt, delay=λt))
+
             t0 = DateTime(2024,1,1,0,0,0)
             t1 = DateTime(2024,1,1,0,1,0)
             vt = datetime2unix.(t0:Second(1):t1)
-            dt = Millisecond(0)
-            λt = Millisecond(0)
-
-            function callback(data::Dict{String, TimeSeries{T}}, interval::TimeInterval) where T
-                return getinner(data, TimeInterval(interval[1], interval[2]-0.001))
-            end
+            
 
             pert = rand(length(vt)).*0
             original = Dict(
@@ -162,7 +165,7 @@ using Dates
 
             
             #Mismatch test
-            collector = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0+dt))
+            collector  = TimeSeriesCollector{Float64}(interval=dt, delay=λt, timer=Ref(t0))
             mismatches = Tuple{Dict{String,TimeSeries{Float64}}, Dict{String,TimeSeries{Float64}}}[]
 
             for tagrecord in dataseries
@@ -171,8 +174,7 @@ using Dates
                 if !isnothing(result)
                     y1 = getouter(result.snapshot, result.interval)
                     y0 = getouter(original, result.interval)
-                    
-                    if iszero(λt) #When delay is zero, future values won't be accessible
+                    if λt < Second(1) #When delay is less than input sampling rate, future values won't be accessible
                         for (k,v) in pairs(y0)
                             keepat!(records(v), 1:length(y1[k]))
                         end
@@ -182,6 +184,9 @@ using Dates
                         push!(mismatches, (y0, y1))
                     end
                 end
+            end
+            if !isempty(mismatches)
+                @warn "Test failed at $((interval=dt, delay=λt))"
             end
             @test isempty(mismatches)
 
@@ -203,13 +208,15 @@ using Dates
 
             anymismatches = Ref(false)
             for (k, ts) in pairs(reconstructed)
-                mismatched = (ts != original[k][1:length(ts)])
+                n = min(length(original[k]), length(ts))
+                mismatched = (ts != original[k][1:n])
                 anymismatches[] == anymismatches[] | mismatched
+            end
+            if anymismatches[]
+                @info "Test failed at $((interval=dt, delay=λt))"
             end
             @test !anymismatches[]
         end
     end
-
-
 end
 

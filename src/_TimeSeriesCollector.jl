@@ -11,13 +11,13 @@ Used to collect tagged time records Pair{String=>TimeRecord{T}} arriving mostly 
         when set to zero, the interval will be the distance between timestamps
  -  'delay' is the amount of time we wait beyond the interval to collect data. 
         This helps make algorithms robust against slightly out-of-order data
- -  'timer' is a DateTime reference that indicates when the end of the next interval is due (will wait for 'delay') before collecting
+ -  'timer' is a DateTime reference that indicates the beginning of the next collection interval
  -  'data' is a Dict of TimeSeries that stores collected data. 
 """
 @kwdef struct TimeSeriesCollector{T}
     interval :: Millisecond
     delay :: Millisecond
-    timer :: Base.RefValue{DateTime}  = Ref(floor(now(UTC), interval))
+    timer :: Base.RefValue{DateTime} = Ref(iszero(interval) ? now(UTC) : floor(now(UTC), interval))
     data  :: Dict{String, TimeSeries{T}} = Dict{String, TimeSeries{T}}()
     function TimeSeriesCollector{T}(interval, delay, timer, data) where T
         if interval < zero(interval)
@@ -106,12 +106,14 @@ Notes:
  -  'snapshot' and 'interval' can span more than one 'collector.interval' if many intervals have elapsed between samples
 """
 function Base.take!(collector::TimeSeriesCollector, t::DateTime)
-    if t > (collector.timer[] + collector.delay)
+    if t > (collector.timer[] + collector.delay + collector.interval)
         #Construct the time interval
-        t0 = collector.timer[] - collector.interval #Start of this interval
-        tn = starttimer!(collector, t - collector.delay) #End of next interval
-        t1 = tn - collector.interval #End of this interval
+        t0 = collector.timer[] #Start of this interval
+        t1 = next_interval_start(collector, t)
         interval = TimeInterval(t0, t1)
+
+        #Set the start time of the new interval
+        collector.timer[] = t1
 
         #Collect data that spans the time interval
         snapshot = getouter(collector.data, interval)
@@ -148,19 +150,14 @@ function Base.push!(collector::TimeSeriesCollector{T}, tagrecord::Pair{<:Abstrac
 end
 
 """
-starttimer!(collector::TimeSeriesCollector, start::DateTime)
+calctimer(collector::TimeSeriesCollector, current::DateTime)
 
-Sets the timer on 'collector' to the end of the interval that contains 'start', "zero" interval sets timer to "start"
+Calculates the beginning of the next time interval given the current time
 """
-function starttimer!(collector::TimeSeriesCollector, start::DateTime)
-    if start > collector.timer[]
-        if iszero(collector.interval)
-            collector.timer[] = start 
-        else
-            collector.timer[] = floor(start, collector.interval) + collector.interval
-        end
-    end
-    return collector.timer[]
+function next_interval_start(collector::TimeSeriesCollector, current::DateTime)
+    rawstart = current - collector.delay - collector.interval
+    newstart = iszero(collector.interval) ? rawstart : ceil(rawstart, collector.interval)-collector.interval
+    return max(collector.timer[], newstart)
 end
 
 
