@@ -17,7 +17,7 @@ Used to collect tagged time records Pair{String=>TimeRecord{T}} arriving mostly 
 @kwdef struct TimeSeriesCollector{T}
     interval :: Millisecond
     delay :: Millisecond
-    timer :: Base.RefValue{DateTime}  = Ref(floor(now(UTC), interval))
+    timer :: Base.RefValue{DateTime} = Ref(iszero(interval) ? now(UTC) : floor(now(UTC), interval))
     data  :: Dict{String, TimeSeries{T}} = Dict{String, TimeSeries{T}}()
     function TimeSeriesCollector{T}(interval, delay, timer, data) where T
         if interval < zero(interval)
