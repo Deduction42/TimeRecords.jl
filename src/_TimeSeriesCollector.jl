@@ -106,12 +106,14 @@ Notes:
  -  'snapshot' and 'interval' can span more than one 'collector.interval' if many intervals have elapsed between samples
 """
 function Base.take!(collector::TimeSeriesCollector, t::DateTime)
-    if t > (collector.timer[] + collector.delay)
+    if t > (collector.timer[] + collector.delay + collector.interval)
         #Construct the time interval
-        t0 = collector.timer[] - collector.interval #Start of this interval
-        tn = starttimer!(collector, t - collector.delay) #End of next interval
-        t1 = tn - collector.interval #End of this interval
+        t0 = collector.timer[] #Start of this interval
+        t1 = next_interval_start(collector, t)
         interval = TimeInterval(t0, t1)
+
+        #Set the start time of the new interval
+        collector.timer[] = t1
 
         #Collect data that spans the time interval
         snapshot = getouter(collector.data, interval)
@@ -148,19 +150,14 @@ function Base.push!(collector::TimeSeriesCollector{T}, tagrecord::Pair{<:Abstrac
 end
 
 """
-starttimer!(collector::TimeSeriesCollector, start::DateTime)
+calctimer(collector::TimeSeriesCollector, current::DateTime)
 
-Sets the timer on 'collector' to the end of the interval that contains 'start', "zero" interval sets timer to "start"
+Calculates the beginning of the next time interval given the current time
 """
-function starttimer!(collector::TimeSeriesCollector, start::DateTime)
-    if start > collector.timer[]
-        if iszero(collector.interval)
-            collector.timer[] = start 
-        else
-            collector.timer[] = floor(start, collector.interval) + collector.interval
-        end
-    end
-    return collector.timer[]
+function next_interval_start(collector::TimeSeriesCollector, current::DateTime)
+    rawstart = current - collector.delay - collector.interval
+    newstart = iszero(collector.interval) ? rawstart : floor(rawstart, collector.interval)
+    return max(collector.timer[], newstart)
 end
 
 

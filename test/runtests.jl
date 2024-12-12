@@ -143,6 +143,7 @@ using Dates
 
     for dt in (Millisecond(0), Millisecond(1000), Millisecond(2500))
         for λt in (Millisecond(0), Millisecond(1), dt)
+            display((interval=dt, delay=λt))
             t0 = DateTime(2024,1,1,0,0,0)
             t1 = DateTime(2024,1,1,0,1,0)
             vt = datetime2unix.(t0:Second(1):t1)
@@ -150,7 +151,7 @@ using Dates
             λt = Millisecond(0)
 
             function callback(data::Dict{String, TimeSeries{T}}, interval::TimeInterval) where T
-                return getinner(data, TimeInterval(interval[1], interval[2]-0.001))
+                return getinner(data, TimeInterval(interval[1], interval[2]))
             end
 
             pert = rand(length(vt)).*0
@@ -171,7 +172,6 @@ using Dates
                 if !isnothing(result)
                     y1 = getouter(result.snapshot, result.interval)
                     y0 = getouter(original, result.interval)
-                    
                     if iszero(λt) #When delay is zero, future values won't be accessible
                         for (k,v) in pairs(y0)
                             keepat!(records(v), 1:length(y1[k]))
