@@ -9,6 +9,10 @@ using Dates
     t  = [1.5, 2.5, 3.5]
     tse = TimeSeries{Float64}()
 
+    #Test indhint initialization
+    @test initialize!(Ref(1), ts, 2.5) ≈ 2
+    @test initialize!(Ref(1), ts, 0.5) ≈ 1
+
     #Test extrapolation/interpolation
     @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
     @test values(interpolate(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]

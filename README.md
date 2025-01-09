@@ -95,13 +95,21 @@ Strict interpolation will return a missing value if outside the range.
 `strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)`
 
 ## Integration
-The second major functionality supported is integration (and averaging). Integration can be done over a simple TimeInterval, or on a vector of timestamps (where n values will result in n-1 integration intervals).
+The second major functionality supported is integration (and averaging). Integration can be done over a simple TimeInterval, or on a vector of timestamps (where n values will result in n-1 integration intervals). 
 ```
 average(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
-integral(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
+integrate(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=1) where T
 accumulate(ts::AbstractTimeSeries{T}; order=1) where T
-integral(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=1) where T <: Number
+integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing; order=1) where T <: Number
+average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing; order=1) where T <: Number
 ```
+When using a single TimeInterval, you may want to set `indhint=nothing` if you are only doing a single evaluation on that timeseries (this performs a bisection search). However, if you are performing integration/averageing over multiple time intervals on the same timeseries, in order you may want to use
+```
+indhint=initialize!(Ref(1), ts, t)
+integrate(ts, t, indhint=indhint, order=1)
+```
+and re-use indhint for every subsequent evaluation. This allows the integration step to save its final search result in `indhint` giving a strong recommendation for the next step on where to start, greatly reducing the need for searching.
+
 ## Merging
 In many cases, it's desirable to have multivariate data where a full multivariate observation exists for every desired timestamp. However, it's often the case that different timestamps are available for different variables. The merging functionality finds the union of all timestamps and interpolates all timeseries, resulting in full multivariate observations for each timestamp. If desired timestamps are known, those can be provided. You can also provide a function to apply to the collection of observations (such as Vector, the default is Tuple)
 

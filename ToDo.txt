@@ -1,1 +1,3 @@
-
+Breaking changes:
+ -  integrate(ts::AbstractTimeSeries, dt::TimeInterval) now takes "indhint" as a keyword argument, not a positional one
+ -  findbounds(ts, t) will yield the same value twice if it lines up exactly with an existing timestamp
