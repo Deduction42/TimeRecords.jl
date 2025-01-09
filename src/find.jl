@@ -5,16 +5,16 @@ getinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer=firstindex(
 
 Return the elements of the Timeseries (ts) where Δt[begin] <= ts.t <= Δt[end]) 
 """
-getinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=firstindex(ts))  = ts[findinner(ts, Δt, indhint)]
-viewinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=firstindex(ts)) = @view ts[findinner(ts, Δt, indhint)]
+getinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=nothing)  = ts[findinner(ts, Δt, indhint)]
+viewinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=nothing) = @view ts[findinner(ts, Δt, indhint)]
 
 """
 findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint)
 
 Return the elements of the Timeseries (ts) that surround the time interval Δt
 """
-getouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=firstindex(ts))  = ts[findouter(ts, Δt, indhint)]
-viewouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=firstindex(ts)) = @view ts[findouter(ts, Δt, indhint)]
+getouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=nothing)  = ts[findouter(ts, Δt, indhint)]
+viewouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint=nothing) = @view ts[findouter(ts, Δt, indhint)]
 
 
 
@@ -96,8 +96,7 @@ function findbounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)
     earlier_than_t(x::TimeRecord) = timestamp(x) <= t
     later_than_t(x::TimeRecord)   = timestamp(x) >= t
 
-    ind0 = firstindex(ts)
-    indN = lastindex(ts)
+    (ind0, indN) = (firstindex(ts), lastindex(ts))
     indhint = clamp(indhint, ind0, indN)
 
     if earlier_than_t(ts[indhint]) #Walk forward in time if indhint record occurs earlier than t
@@ -159,6 +158,18 @@ end
 findbounds(ts::AbstractTimeSeries, t::Real, indhint::Nothing) = findbounds(ts, t)
 
 """
+initialize!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
+
+Initializes an index hint with the bisection method
+"""
+function initialize!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
+    (lb, ub)  = findbounds(ts, t)
+    indhint[] = clampindex(lb, ts)
+    return indhint[]
+end
+
+
+"""
 clampedbounds(ts::AbstractTimeSeries, t::Real, indhint=nothing)
 
 Behaves like findbounds except that it always returns integer boundaries within the timeseries bounds
@@ -170,31 +181,21 @@ function clampedbounds(ts::AbstractTimeSeries, t::Real, indhint=nothing)
     return clamp(lb, minb, maxb) => clamp(ub, minb, maxb)
 end
 
-
-#=
 """
-findbounds(ts::AbstractTimeSeries, t::Real, indhint::RefValue{<:Integer})
+clampindex(ind::Integer, ts::AbstractTimeSeries)
 
-Behaves like findbounds except that it always returns integer boundaries within the timeseries bounds
+Clamps ind so that it is always within the bounds of ts
 """
-findbounds(ts::AbstractTimeSeries, t::Real, indhint) = extendbounds(findbounds(ts, t, indhint))
+function clampindex(ind::Integer, ts::AbstractTimeSeries)
+    return clamp(ind, firstindex(ts), lastindex(ts))
+end
 
+#============================================================================================
+Indhint handling for ref values
+============================================================================================#
+function _update_indhint!(indhint::Base.Ref, v::Integer)
+    indhint[] = v
+    return indhint
+end
 
-"""
-clampbounds(Pair{Union{Integer,Nothing}, Union{Integer,Nothing}})
-
-Clamps the result of findbounds so that results contain integers (not Nothing) inside the index
-"""
-clampbounds(t::Pair{Nothing, <:Integer})   = t[2] => t[2]
-clampbounds(t::Pair{<:Integer, Nothing})   = t[1] => t[1]
-clampbounds(t::Pair{<:Integer, <:Integer}) = t
-
-"""
-extendbounds(Pair{Union{Integer,Nothing}, Union{Integer,Nothing}})
-
-Clamps the result of findbounds so that results contain integers (not Nothing) but can be outside the index
-"""
-extendbounds(t::Pair{Nothing, <:Integer})   = (t[2]-1) => t[2]
-extendbounds(t::Pair{<:Integer, Nothing})   = t[1] => (t[1]+1)
-extendbounds(t::Pair{<:Integer, <:Integer}) = t
-=#
+_update_indhint!(indhint, v::Integer) = v

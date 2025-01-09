@@ -1,17 +1,5 @@
 include("interpolate.jl")
 
-#=======================================================================================================================
-ToDo:
-(0) Create TimeSeriesView to represent views of timeseries
-     -  findinner(ts, Δt, indhint) should return indices where Δt[begin] <= t <= Δt[end]
-     -  innerview(ts, Δt, indhint) should return a view of the timestamps between Δt[begin], Δt[end]
-     -  outerview(ts, Δt, indhint) should return a view of the timestamps that are just outside Δt[begin], Δt[end]
-(1) time_integral should have a basic function for AbstractTimeSeries (no bounds) like what we use for cumulative_integral
-(2) When time ranges are applied, find the inner view, integrate, and add the integrals of the extrapolated end values
-(3) time_average just divides the integral by the time difference
-(4) time_integral(...) and time_average(...) should allow passing indhint
-     -  time_integrals(...) and time_averages(...) should pass indhint
-=======================================================================================================================#
 
 """
 averages(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=0) where T
@@ -40,7 +28,7 @@ function integrate(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Union{Real,Da
 
     for ii in firstindex(vt):(lastindex(vt)-1)
         Δt = TimeInterval(vt[ii], vt[ii+1])
-        ∫ts[ii] = integrate(ts, Δt, indhint, order=order)
+        ∫ts[ii] = integrate(ts, Δt, indhint=indhint, order=order)
     end
     return TimeSeries(vt[(begin+1):end], ∫ts)
 end
@@ -69,8 +57,12 @@ end
 integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T <: Number
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
+
+Performance recommendations:
+ -  If this function is used only once on this timeseries, set indhint=nothing to use a bisection search
+ -  If this function is used multiple times on the same timeseries in order, set indhint=initialize!(Ref(1), ts, Δt[begin])
 """
-function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T
+function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     if iszero(diff(Δt))
         return value(ts[begin])*0.0
         
@@ -83,8 +75,11 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstin
         return value(ts[end])*diff(Δt)
     end
 
-    #Find the indices in "ts" that bound Δt
+    #Find the indices in "ts" that bound Δt and update the index hint
     ind  = findouter(ts, Δt, indhint)
+    _update_indhint!(indhint, ind[end])
+
+    #All indexes surrounding the integration foundary
     (ia, ib, ic, id) = (ind[begin], ind[begin+1], ind[end-1], ind[end])
     
     #interpolate from the boundaries
@@ -103,6 +98,24 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstin
     return ∫ts
 end
 
+"""
+average(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T <: Number
+
+Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
+Finally, divide integral by the elapsed time of Δt
+
+Performance recommendations:
+ -  If this function is used only once on this timeseries, set indhint=nothing to use a bisection search
+ -  If this function is used multiple times on the same timeseries in order, set indhint=initialize!(Ref(1), ts, Δt[begin])
+"""
+function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
+    dt = diff(Δt)
+    if iszero(dt) #Interval is zero, simply interpolate for the average (limit when dt=>0)
+        return interpolate(ts, Δt[begin], order=order)
+    else
+        return integrate(ts, Δt, indhint=indhint, order=order)/dt
+    end
+end
 
 """
 integrate(ts::AbstractTimeSeries{T}; order=0) where T

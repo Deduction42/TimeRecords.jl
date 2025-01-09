@@ -1,1 +1,7 @@
+Breaking changes:
+ -  integrate(ts::AbstractTimeSeries, dt::TimeInterval) now takes "indhint" as a keyword argument, not a positional one
 
+Future considerations:
+ -  findbounds(ts, t) is not deterministic if t is approximately equal to an exact timestamp in ts
+     -  If 't' approximately matches a time interval of 'ts' (within machine precision) it should produce (lb=>lb) not (lb=>(lb+1))
+     -  A lot of code is already made to handle this indeterminate behaviour, but enforcing this behaviour can simplify the higher level logic 

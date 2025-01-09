@@ -30,6 +30,7 @@ module TimeRecords
         findinner,
         findouter,
         findbounds,
+        initialize!,
         clampedbounds,
         keeplatest!,
         apply!,
