@@ -81,26 +81,19 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing
     inds = (bnd1[begin], bnd1[end], bnd2[begin], bnd2[end])
 
     _update_indhint!(indhint, inds[end])
-
-    #Initialize the integral
-    ∫ts  = zero(promote_type(T, Float64))
     
-    #If Δt[begin] is before the middle segment, interpolate it and add the intergral
-    if Δt[begin] < timestamp(ts[inds[2]]) 
-        tsL = interpolate(ts[inds[1]], ts[inds[2]], Δt[begin], order=order)
-        ∫ts += integrate(tsL, ts[inds[2]], order=order)
-    end
+    #Integrate the the first segment (obtained from interpolation)
+    tsL = interpolate(ts[inds[1]], ts[inds[2]], Δt[begin], order=order)
+    ∫ts = integrate(tsL, ts[inds[2]], order=order)
 
-    #If segs[2] and segs[3] are different, there is data between them so we can integrate in that region
+    #Integrate the middle segment if their indices are different
     if inds[2] != inds[3]
         ∫ts += integrate(view(ts, inds[2]:inds[3]), order=order)
     end
 
-    #If Δt[end] is after the middle segment, interpolate it and add the integral
-    if timestamp(ts[inds[3]]) < Δt[end]
-        tsU = interpolate(ts[inds[3]], ts[inds[4]], Δt[end], order=order)
-        ∫ts += integrate(ts[inds[3]], tsU, order=order)
-    end    
+    #Integrate the final segment
+    tsU = interpolate(ts[inds[3]], ts[inds[4]], Δt[end], order=order)
+    ∫ts += integrate(ts[inds[3]], tsU, order=order)
 
     return ∫ts
 end
