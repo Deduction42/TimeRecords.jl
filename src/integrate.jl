@@ -75,25 +75,32 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing
         return value(ts[end])*diff(Δt)
     end
 
-    #Find the indices in "ts" that bound Δt and update the index hint
-    ind  = findouter(ts, Δt, indhint)
-    _update_indhint!(indhint, ind[end])
+    #Find the integral segment indices: segs[1] <= Δt[begin] <= segs[2] <= segs[3] <= Δt[end] <= segs[4]
+    bnd1 = clampedbounds(ts, Δt[begin], indhint)
+    bnd2 = clampedbounds(ts, Δt[end], bnd1[2])
+    inds = (bnd1[begin], bnd1[end], bnd2[begin], bnd2[end])
 
-    #All indexes surrounding the integration foundary
-    (ia, ib, ic, id) = (ind[begin], ind[begin+1], ind[end-1], ind[end])
+    _update_indhint!(indhint, inds[end])
+
+    #Initialize the integral
+    ∫ts  = zero(promote_type(T, Float64))
     
-    #interpolate from the boundaries
-    ts1  = interpolate(ts[ia], ts[ib], Δt[begin], order=order)
-    tsN  = interpolate(ts[ic], ts[id], Δt[end], order=order)
+    #If Δt[begin] doesn't line up withe first segment, use interpolation and add to integral
+    if timestamp(ts[inds[2]]) != Δt[begin]
+        tsL = interpolate(ts[inds[1]], ts[inds[2]], Δt[begin], order=order)
+        ∫ts += integrate(tsL, ts[inds[2]], order=order)
+    end
 
-    #Integrate the initial segment
-    ∫ts  = integrate(ts1, ts[ib], order=order)
-    
-    #Integrate the inner segments
-    ∫ts += integrate(view(ts, ib:ic), order=order)
+    #If segs[2] and segs[3] are different, there is data between them so we can integrate in that region
+    if inds[2] != inds[3]
+        ∫ts += integrate(view(ts, inds[2]:inds[3]), order=order)
+    end
 
-    #Integrate the final segments
-    ∫ts += integrate(ts[ic], tsN, order=order)
+    #If Δt[end] doesn't line up withe final segment, use interpolation and add to integral
+    if timestamp(ts[inds[3]]) != Δt[end]
+        tsU = interpolate(ts[inds[3]], ts[inds[4]], Δt[end], order=order)
+        ∫ts += integrate(ts[inds[3]], tsU, order=order)
+    end    
 
     return ∫ts
 end
