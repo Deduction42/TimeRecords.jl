@@ -154,14 +154,25 @@ end
 findbounds(ts::AbstractTimeSeries, t::Real, indhint::Nothing) = findbounds(ts, t)
 
 """
-initialize!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
+initialhint(ts::AbstractTimeSeries, t::Real)
 
-Initializes an index hint with the bisection method
+Produces a RefValue with the last index of ts that is less than or equal to t (uses bisection method)
 """
-function initialize!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
+function initialhint(ts::AbstractTimeSeries, t::Real)
+    (lb, ub)  = findbounds(ts, t)
+    return Base.RefValue(clampindex(lb,ts))
+end
+
+
+"""
+initialhint!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
+
+Initializes a RefValue with the last index of ts that is less than or equal to t (uses bisection method)
+"""
+function initialhint!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
     (lb, ub)  = findbounds(ts, t)
     indhint[] = clampindex(lb, ts)
-    return indhint[]
+    return indhint
 end
 
 

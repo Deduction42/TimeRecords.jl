@@ -10,8 +10,8 @@ using Dates
     tse = TimeSeries{Float64}()
 
     #Test indhint initialization
-    @test initialize!(Ref(1), ts, 2.5) ≈ 2
-    @test initialize!(Ref(1), ts, 0.5) ≈ 1
+    @test initialhint!(Ref(1), ts, 2.5)[] ≈ 2
+    @test initialhint!(Ref(1), ts, 0.5)[] ≈ 1
 
     #Test extrapolation/interpolation
     @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
