@@ -60,7 +60,9 @@ Integrate a timeseries over time interval Δt using either a trapezoid method (o
 
 Performance recommendations:
  -  If this function is used only once on this timeseries, set indhint=nothing to use a bisection search
- -  If this function is used multiple times on the same timeseries in order, set indhint=initialize!(Ref(1), ts, Δt[begin])
+ -  If this function is used multiple times on the same timeseries in order, 
+        (1) Build out your initial hint: indhint = initialhint(ts, Δt[begin])
+        (2) Use this hint for every subsequent call: indhint=indhint
 """
 function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     if iszero(diff(Δt))
@@ -99,14 +101,16 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing
 end
 
 """
-average(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T <: Number
+average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T <: Number
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 Finally, divide integral by the elapsed time of Δt
 
 Performance recommendations:
  -  If this function is used only once on this timeseries, set indhint=nothing to use a bisection search
- -  If this function is used multiple times on the same timeseries in order, set indhint=initialize!(Ref(1), ts, Δt[begin])
+ -  If this function is used multiple times on the same timeseries in order, 
+        (1) Build out your initial hint: indhint = initialhint(ts, Δt[begin])
+        (2) Use this hint for every subsequent call: indhint=indhint
 """
 function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     dt = diff(Δt)

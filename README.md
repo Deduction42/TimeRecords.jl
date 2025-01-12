@@ -105,7 +105,7 @@ average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing; order=1) 
 ```
 When using a single TimeInterval, you may want to set `indhint=nothing` if you are only doing a single evaluation on that timeseries (this performs a bisection search). However, if you are performing integration/averageing over multiple time intervals on the same timeseries, in order you may want to use
 ```
-indhint=initialize!(Ref(1), ts, t)
+indhint=initialhint!(Ref(1), ts, t)
 integrate(ts, t, indhint=indhint, order=1)
 ```
 and re-use indhint for every subsequent evaluation. This allows the integration step to save its final search result in `indhint` giving a strong recommendation for the next step on where to start, greatly reducing the need for searching.
