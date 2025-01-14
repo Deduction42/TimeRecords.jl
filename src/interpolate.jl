@@ -12,11 +12,11 @@ Extrapolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real
 Returns an ordinary TimeSeries with timestamps at vt
 Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
 """
-function interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
+function interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0, indhint=nothing)
     if order == 0
-        return interpolate(_interpolate_lastval, ts, t)
+        return interpolate(_interpolate_lastval, ts, t, indhint=indhint)
     elseif order == 1
-        return interpolate(_interpolate_linsat, ts, t)
+        return interpolate(_interpolate_linsat, ts, t, indhint=indhint)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
@@ -30,11 +30,11 @@ Interpolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real
 Returns an ordinary TimeSeries with timestamps at vt
 Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
 """
-function strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
+function strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0, indhint=nothing)
     if order == 0
-        return strictinterp(_interpolate_lastval, ts, t)
+        return strictinterp(_interpolate_lastval, ts, t, indhint=indhint)
     elseif order == 1
-        return strictinterp(_interpolate_linsat, ts, t)
+        return strictinterp(_interpolate_linsat, ts, t, indhint=indhint)
     else
         error("Keyword 'order' only supports zero-order-hold (order=0) and first-order-interpolation (order=1)")
     end
@@ -63,9 +63,10 @@ interpolate(rng::NTuple{2,<:TimeRecord}, t::Real; order=0)  = interpolate(rng[1]
 Extrapolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point algorithm
 Current two-point algorithms that are supported are zero-order-hold, first-order-interpolation
 """
-function interpolate(f_extrap::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real})
-    indhint = Ref(1)    
-    vtr = map(t->interpolate(f_extrap, ts, t, indhint), sort(vt))
+function interpolate(f_extrap::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; indhint=nothing)
+    sortvt  = sort(vt)
+    newhint = initialhint!(indhint, ts, first(sortvt))
+    vtr = map(t->interpolate(f_extrap, ts, t, indhint=newhint), sortvt)
     return TimeSeries(vtr, issorted=true)
 end
 
@@ -73,9 +74,10 @@ end
 Interpolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point interpolation algorithm f_interp
 Current two-point algorithms that are supported are zero-order-hold, first-order-interpolation
 """
-function strictinterp(f_interp::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real})
-    indhint = Ref(1)    
-    vtr = map(t->strictinterp(f_interp, ts, t, indhint), sort(vt))
+function strictinterp(f_interp::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; indhint=nothing)
+    sortvt  = sort(vt)
+    newhint = initialhint!(indhint, ts, first(sortvt)) 
+    vtr = map(t->strictinterp(f_interp, ts, t, indhint=newhint), sortvt)
     return TimeSeries(vtr, issorted=true)
 end
 
@@ -84,7 +86,7 @@ interpolate(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{
 
 Single extrapolation at time t::Real, provide an indhint for faster searching
 """
-function interpolate(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
+function interpolate(f_extrap::Function, ts::AbstractTimeSeries, t::Real; indhint=nothing)
     (lb, ub) = clampedbounds(ts, t, indhint)
     return f_extrap(ts[lb], ts[ub], t)
 end
@@ -95,7 +97,7 @@ strictinterp(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union
 Single interpolation at time t::Real, provide an indhint for faster searching
 Will return TimeRecord{t, Missing} if t is not within the range of the timeseries
 """
-function strictinterp(f_extrap::Function, ts::AbstractTimeSeries, t::Real, indhint=nothing)
+function strictinterp(f_extrap::Function, ts::AbstractTimeSeries, t::Real; indhint=nothing)
     (lb, ub) = findbounds(ts, t, indhint)
     if !(checkbounds(Bool, ts, lb) & checkbounds(Bool, ts, ub))
         return TimeRecord(t, missing)

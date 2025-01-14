@@ -175,6 +175,8 @@ function initialhint!(indhint::Base.RefValue, ts::AbstractTimeSeries, t::Real)
     return indhint
 end
 
+initialhint!(indhint::Nothing, ts::AbstractTimeSeries, t::Real) = initialhint(ts, t)
+initialhint!(indhint::Integer, ts::AbstractTimeSeries, t::Real) = initialhint(ts, t)
 
 """
 clampedbounds(ts::AbstractTimeSeries, t::Real, indhint=nothing)
