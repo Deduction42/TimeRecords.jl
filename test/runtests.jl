@@ -42,6 +42,15 @@ using Dates
         SVector(5.0, 2.6),
     ]
 
+    #Test merging timeseries to defined time records
+    vt = [0,1,3,5]
+    @test values(merge(SVector, vt, ts, ts2, ts2, order=0)) ≈ [
+        SVector(1.0, 1.5, 1.5),
+        SVector(1.0, 1.5, 1.5),
+        SVector(3.0, 2.6, 2.6),
+        SVector(5.0, 2.6, 2.6)
+    ]
+
     #Test mapvalues
     @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
     @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
