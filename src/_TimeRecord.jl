@@ -51,7 +51,7 @@ end
 Merge multiple time records with the same timestamp as a tuple
 """
 function Base.merge(vtr::TimeRecord...)
-    if !allequal(timestamp, vtr)
+    if !allequal(timestamp.(vtr))
         error("Cannot merge time records for different timestamps")
     end
     return TimeRecord(vtr[begin].t, value.(vtr))
