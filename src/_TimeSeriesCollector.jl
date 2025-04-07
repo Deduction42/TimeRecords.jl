@@ -106,10 +106,11 @@ Notes:
  -  'snapshot' and 'interval' can span more than one 'collector.interval' if many intervals have elapsed between samples
 """
 function Base.take!(collector::TimeSeriesCollector, t::DateTime)
-    if t > (collector.timer[] + collector.delay + collector.interval)
+    t0 = collector.timer[] #Start of this interval
+    t1 = next_interval_start(collector, t) #Where the interval will end
+
+    if t1 > t0 #Only evaluate if the interval is going to be greater than zero
         #Construct the time interval
-        t0 = collector.timer[] #Start of this interval
-        t1 = next_interval_start(collector, t)
         interval = TimeInterval(t0, t1)
 
         #Set the start time of the new interval
