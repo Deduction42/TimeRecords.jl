@@ -30,6 +30,11 @@ using Dates
     @test values(accumulate(ts, order=0)) ≈ [1, 3, 6, 10]
     @test values(accumulate(ts, order=1)) ≈ [1.5, 4.0, 7.5, 12.0]
 
+    @test average(ts, TimeInterval(1,2), order=0) ≈ 1
+    @test average(ts, TimeInterval(1,2), order=1) ≈ 1.5
+    @test average(ts, TimeInterval(2,2), order=0) ≈ 2
+    @test average(ts, TimeInterval(2,2), order=1) ≈ 2
+
     #Test merging timeseries
     ts2 = TimeSeries([1.5, 2.6], [1.5, 2.6])
     @test values(merge(SVector, ts, ts2, order=1)) ≈ [ 

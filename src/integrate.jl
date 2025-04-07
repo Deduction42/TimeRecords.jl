@@ -115,7 +115,7 @@ Performance recommendations:
 function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     dt = diff(Δt)
     if iszero(dt) #Interval is zero, simply interpolate for the average (limit when dt=>0)
-        return interpolate(ts, Δt[begin], indhint=indhint, order=order)
+        return value(interpolate(ts, Δt[begin], indhint=indhint, order=order))
     else
         return integrate(ts, Δt, indhint=indhint, order=order)/dt
     end
