@@ -73,7 +73,9 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing
         return value(ts[begin])*diff(Δt)
 
     elseif timestamp(ts[end]) < Δt[begin]
-        @warn "Time interval (Δt) occurs completely after the timeseries history, results are likely inaccurate"
+        if order > 0 #Completely after timesereis is not an issue for zero-order hold
+            @warn "Time interval (Δt) occurs completely after the timeseries history, results are likely inaccurate"
+        end
         return value(ts[end])*diff(Δt)
     end
 
