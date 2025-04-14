@@ -1,4 +1,4 @@
-include("interpolate.jl")
+include("interpolations.jl")
 
 
 """
@@ -73,28 +73,41 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing
         return value(ts[begin])*diff(Δt)
 
     elseif timestamp(ts[end]) < Δt[begin]
-        @warn "Time interval (Δt) occurs completely after the timeseries history, results are likely inaccurate"
+        if order > 0 #Completely after timesereis is not an issue for zero-order hold
+            @warn "Time interval (Δt) occurs completely after the timeseries history, results are likely inaccurate"
+        end
         return value(ts[end])*diff(Δt)
     end
 
-    #Find the integral segment indices: segs[1] <= Δt[begin] <= segs[2] <= segs[3] <= Δt[end] <= segs[4]
+    #Find the boundinh indices for the endpoints of Δt
     bnd1 = clampedbounds(ts, Δt[begin], indhint)
     bnd2 = clampedbounds(ts, Δt[end], bnd1[2])
-    inds = (bnd1[begin], bnd1[end], bnd2[begin], bnd2[end])
 
+    #Interpolate the end points Δt
+    tsL = interpolate(ts[bnd1[begin]], ts[bnd1[end]], Δt[begin], order=order)
+    tsU = interpolate(ts[bnd2[begin]], ts[bnd2[end]], Δt[end], order=order)
+
+    #Shortcut if Δt occurs completely within two timestamps
+    if bnd1[end] > bnd2[begin]
+        return integrate(tsL, tsU, order=order)
+    end
+    
+    #Lay out the integral segment indices: inds[1] <= Δt[begin] <= inds[2] <= inds[3] <= Δt[end] <= inds[4]
+    inds = (bnd1[begin], bnd1[end], bnd2[begin], bnd2[end])
+    if !(inds[1] <= inds[2] <= inds[3] <= inds[4])
+        error("Indices must be in ascending order")
+    end
     _update_indhint!(indhint, inds[end])
     
     #Integrate the the first segment (obtained from interpolation)
-    tsL = interpolate(ts[inds[1]], ts[inds[2]], Δt[begin], order=order)
     ∫ts = integrate(tsL, ts[inds[2]], order=order)
 
     #Integrate the middle segment if their indices are different
-    if inds[2] != inds[3]
+    if inds[2] < inds[3]
         ∫ts += integrate(view(ts, inds[2]:inds[3]), order=order)
     end
 
     #Integrate the final segment
-    tsU = interpolate(ts[inds[3]], ts[inds[4]], Δt[end], order=order)
     ∫ts += integrate(ts[inds[3]], tsU, order=order)
 
     return ∫ts
@@ -120,6 +133,7 @@ function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, 
         return integrate(ts, Δt, indhint=indhint, order=order)/dt
     end
 end
+
 
 """
 integrate(ts::AbstractTimeSeries{T}; order=0) where T
@@ -158,4 +172,39 @@ end
 function trapezoid_integral(r1::TimeRecord, r2::TimeRecord)
     μ = 0.5*(value(r1) + value(r2))
     return μ*diff(TimeInterval(r1, r2))
+end
+
+# ===================================================================================
+# max/min aggregation methods which always use zeroth-order interpolation
+# ===================================================================================
+function Base.max(ts::TimeSeries, vt::AbstractVector{<:Real})
+    indhint = Ref(firstindex(ts))
+    vals = fill(value(ts[begin])*0.0, length(vt)-1)
+
+    for ii in firstindex(vt):(lastindex(vt)-1)
+        Δt = TimeInterval(vt[ii], vt[ii+1])
+        vals[ii] = max(ts, Δt, indhint=indhint)
+    end
+    return TimeSeries(vt[(begin+1):end], vals)
+end
+
+function Base.min(ts::TimeSeries, vt::AbstractVector{<:Real})
+    indhint = Ref(firstindex(ts))
+    vals = fill(value(ts[begin])*0.0, length(vt)-1)
+
+    for ii in firstindex(vt):(lastindex(vt)-1)
+        Δt = TimeInterval(vt[ii], vt[ii+1])
+        vals[ii] = min(ts, Δt, indhint=indhint)
+    end
+    return TimeSeries(vt[(begin+1):end], vals)
+end
+
+function Base.max(ts::TimeSeries, Δt::TimeInterval; indhint=nothing)
+    x0 = value(interpolate(ts, Δt[begin], indhint=indhint, order=0))
+    return max(x0, maximum(value, view(ts, Δt), init=-Inf))
+end
+
+function Base.min(ts::TimeSeries, Δt::TimeInterval; indhint=nothing)
+    x0 = value(interpolate(ts, Δt[begin], indhint=indhint, order=0))
+    return min(x0, minimum(value, view(ts, Δt), init=Inf))
 end

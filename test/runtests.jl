@@ -22,18 +22,27 @@ using Dates
     @test value(interpolate(ts, 6, order=1)) ≈ 5
     @test ismissing(value(strictinterp(ts, 6, order=0)))
 
-    #Test integrals and averages
+    #Test aggregations
     @test values(average(ts, t, order=0))  ≈ [1.5, 2.5]
     @test values(average(ts, t, order=1))  ≈ [2, 3]
     @test values(integrate(ts, t, order=0)) ≈ [1.5, 2.5]
     @test values(integrate(ts, t, order=1)) ≈ [2, 3]
     @test values(accumulate(ts, order=0)) ≈ [1, 3, 6, 10]
     @test values(accumulate(ts, order=1)) ≈ [1.5, 4.0, 7.5, 12.0]
+    @test integrate(ts, TimeInterval(1.1, 1.3), order=0) ≈ 0.2
+    @test average(ts, TimeInterval(1.1, 1.3), order=0) ≈ 1.0
+    @test integrate(ts, TimeInterval(1.1, 1.3), order=1) ≈ 0.24
+    @test average(ts, TimeInterval(1.1, 1.3), order=1) ≈ 1.2
 
     @test average(ts, TimeInterval(1,2), order=0) ≈ 1
     @test average(ts, TimeInterval(1,2), order=1) ≈ 1.5
     @test average(ts, TimeInterval(2,2), order=0) ≈ 2
     @test average(ts, TimeInterval(2,2), order=1) ≈ 2
+
+    @test max(ts, TimeInterval(4,5)) == 5
+    @test max(ts, TimeInterval(4.1, 4.2)) == 4
+    @test min(ts, TimeInterval(4,5)) == 4
+    @test min(ts, TimeInterval(4.1,4.2)) == 4
 
     #Test merging timeseries
     ts2 = TimeSeries([1.5, 2.6], [1.5, 2.6])
