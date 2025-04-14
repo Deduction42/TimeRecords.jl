@@ -1,4 +1,4 @@
-include("integrate.jl")
+include("aggregations.jl")
 
 """
 Converts a dictionary of different timeseries into a tabular dictionary form where
