@@ -7,7 +7,6 @@ recordtype(::Type{<:AbstractTimeRecord{T}}) where T = T
 timestamp(x::AbstractTimeRecord) = x.t
 value(x::AbstractTimeRecord) = x.v
 
-unixtime(x::AbstractTimeRecord) = x.t
 datetime(x::AbstractTimeRecord) = unix2datetime(timestamp(x))
 update_time(x::TR, t::Real) where TR<:AbstractTimeRecord  = TR(t, value(x))
 
@@ -25,11 +24,6 @@ end
 TimeRecord{T}(t::DateTime, v) where T = TimeRecord{T}(datetime2unix(t), v)
 TimeRecord(t::Union{Real,DateTime}, v::T) where T = TimeRecord{T}(t, v)
 
-
-Base.:+(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v+x)
-Base.:-(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v-x)
-Base.:*(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v*x)
-Base.:/(Δt::TimeRecord, x::Real) = TimeRecord(Δt.t, Δt.v/x)
 Base.promote_rule(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{promote_rule(R1,R2)}
 Base.convert(::Type{TimeRecord{T}}, x::TimeRecord) where T = TimeRecord{T}(timestamp(x), convert(T,value(x)))
 Base.promote_typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.promote_typejoin(R1,R2)}
@@ -52,7 +46,7 @@ Merge multiple time records with the same timestamp as a tuple
 """
 function Base.merge(vtr::TimeRecord...)
     if !allequal(timestamp.(vtr))
-        error("Cannot merge time records for different timestamps")
+        throw(ArgumentError("Cannot merge time records for different timestamps"))
     end
     return TimeRecord(vtr[begin].t, value.(vtr))
 end

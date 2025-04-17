@@ -7,12 +7,32 @@ using TestItemRunner
 
 #====================================================================================================================================
 Run these commands at startup to see coverage
-julia --startup-file=no --depwarn=yes --threads=auto -e 'using Coverage; clean_folder("src"); clean_folder("test")'
+julia --startup-file=no --depwarn=yes --threads=auto -e 'using Coverage; clean_folder(\"src\"); clean_folder(\"test\")'
 julia --startup-file=no --depwarn=yes --threads=auto --code-coverage=user --project=. -e 'using Pkg; Pkg.test(coverage=true)'
 julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
 ====================================================================================================================================#
+@testset "TimeRecords" begin
+    @test TimeRecords.recordtype(TimeRecord(0,2.0+im)) == ComplexF64
+    @test TimeRecords.recordtype(TimeRecord{Int64}) == Int64
+    @test TimeRecords.update_time(TimeRecord(0,1), 1) == TimeRecord(1,1)
+    @test promote(TimeRecord(0,1), TimeRecord(0,1.0)) === (TimeRecord(0,1.0), TimeRecord(0,1.0))  
+    @test [TimeRecord(0,1), TimeRecord(0,missing)] isa Vector{TimeRecord{Union{Missing, Int64}}}
+    @test Base.promote_typejoin(TimeRecord{Float64}, TimeRecord{Nothing}) == TimeRecord{Base.promote_typejoin(Float64, Nothing)}
+    @test typejoin(TimeRecord{Float64}, TimeRecord{Nothing}) == TimeRecord{typejoin(Float64, Nothing)}
+    @test string(TimeRecord(0,1)) == "TimeRecord{Int64}(t=1970-01-01T00:00:00, v=1)"
+    @test string(TimeRecord(0,"this")) == "TimeRecord{String}(t=1970-01-01T00:00:00, v=\"this\")"
+    @test merge(TimeRecord(0,1), TimeRecord(0,2)) == TimeRecord(0, (1,2))
+    @test_throws ArgumentError merge(TimeRecord(0,1), TimeRecord(1,1))
 
-@testset "TimeRecords.jl" begin
+    @test string(TimeInterval(0,1)) == "1970-01-01T00:00:00 => 1970-01-01T00:00:01"
+    @test firstindex(TimeInterval(0,1)) == 1
+    @test lastindex(TimeInterval(0,1)) == 2
+    @test TimeInterval(0,1)[:] == SVector(0,1)
+    @test size(TimeInterval(0,1)) == (2,)
+end
+
+
+@testset "TimeSeries" begin
     # Test time series
     ts = TimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
@@ -161,9 +181,11 @@ julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
     dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
     ts = TimeSeries(dates, 1:3)
     @test getouter(ts, interval) == ts[1:2]
+end
 
 
 
+@testset "TimeSeriesCollector" begin
     #=========================================================================
     TimeSeriesCollector tests
     =========================================================================#
