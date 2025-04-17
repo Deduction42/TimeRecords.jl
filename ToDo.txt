@@ -1,2 +1,6 @@
-Breaking changes:
- -  interpolate(ts::AbstractTimeSeries, dt::real) now takes "indhint" as a keyword argument (in addition to order)
+ToDo:
+
+1.  Add test coverage checks and a badge
+2.  Achieve > 95% test coverage
+3.  Add documentation
+4.  Add support for mathematical operators

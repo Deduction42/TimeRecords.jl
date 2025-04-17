@@ -9,8 +9,7 @@ Time-weigted averages between the nodes of vt using either
 Timestamps in the resulting period refers to the END of the integral period, so the first element is always NaN
 """
 function average(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}; order=0) where T
-    ∫ts = integrate(ts, vt, order=order)
-    return TimeSeries(vt[(begin+1):end], value.(∫ts)./diff(vt))
+    return aggregate(average, ts, vt; order=order)
 end
 
 
@@ -23,15 +22,48 @@ Return a Timeseries of N-1 integrals, bounded on the intervals of v with the fol
 Timestamps in the resulting period refers to the END of each interval
 """
 function integrate(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Union{Real,DateTime}}; order=0) where T
-    indhint = Ref(firstindex(ts))
-    ∫ts = fill(value(ts[begin])*0.0, length(vt)-1)
-
-    for ii in firstindex(vt):(lastindex(vt)-1)
-        Δt = TimeInterval(vt[ii], vt[ii+1])
-        ∫ts[ii] = integrate(ts, Δt, indhint=indhint, order=order)
-    end
-    return TimeSeries(vt[(begin+1):end], ∫ts)
+    return aggregate(integrate, ts, vt, order=order)
 end
+
+"""
+max(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}) where T
+
+Return a Timeseries of N-1 maxima, bounded on the intervals of v with the following order options: 
+    (order=0) which uses the Riemann integral
+    (order=1) which uses a trapezoidal integral
+Timestamps in the resulting period refers to the END of each interval
+"""
+function Base.max(ts::TimeSeries, vt::AbstractVector{<:Real})
+    return aggregate(max, ts, vt)
+end
+
+"""
+min(ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Real}) where T
+
+Return a Timeseries of N-1 minima, bounded on the intervals of v with the following order options: 
+    (order=0) which uses the Riemann integral
+    (order=1) which uses a trapezoidal integral
+Timestamps in the resulting period refers to the END of each interval
+"""
+function Base.min(ts::TimeSeries, vt::AbstractVector{<:Real})
+    return aggregate(min, ts, vt)
+end
+
+
+"""
+aggregate(f::Function, ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Union{Real,DateTime}}; order=0) where T <: Number
+
+Aggregate a timeseries `ts` over intervals of `vt` using the aggregation function `f` with the following order options: 
+    (order=0) which uses the Riemann integral
+    (order=1) which uses a trapezoidal integral
+This produces a new timeseries with N-1 entries stamped at the end of each interval
+"""
+function aggregate(f::Function, ts::AbstractTimeSeries{T}, vt::AbstractVector{<:Union{Real,DateTime}}; order=0) where T <: Number
+    indhint = Ref(firstindex(ts))
+    indfunc(ii::Integer) = f(ts, TimeInterval(vt[ii-1], vt[ii]), indhint=indhint, order=order)
+    return TimeSeries(vt[(begin+1):end], map(indfunc, (firstindex(vt)+1):lastindex(vt)))
+end
+
 
 
 """
@@ -57,12 +89,6 @@ end
 integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=firstindex(ts); order=0) where T <: Number
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
-
-Performance recommendations:
- -  If this function is used only once on this timeseries, set indhint=nothing to use a bisection search
- -  If this function is used multiple times on the same timeseries in order, 
-        (1) Build out your initial hint: indhint = initialhint(ts, Δt[begin])
-        (2) Use this hint for every subsequent call: indhint=indhint
 """
 function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     if iszero(diff(Δt))
@@ -118,16 +144,10 @@ average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) 
 
 Integrate a timeseries over time interval Δt using either a trapezoid method (order=1) or a flat method (order=0)
 Finally, divide integral by the elapsed time of Δt
-
-Performance recommendations:
- -  If this function is used only once on this timeseries, set indhint=nothing to use a bisection search
- -  If this function is used multiple times on the same timeseries in order, 
-        (1) Build out your initial hint: indhint = initialhint(ts, Δt[begin])
-        (2) Use this hint for every subsequent call: indhint=indhint
 """
 function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     dt = diff(Δt)
-    if iszero(dt) #Interval is zero, simply interpolate for the average (limit when dt=>0)
+    if iszero(dt) #Interval is zero, simply interpolate for the average (limit when dt -> 0)
         return value(interpolate(ts, Δt[begin], indhint=indhint, order=order))
     else
         return integrate(ts, Δt, indhint=indhint, order=order)/dt
@@ -177,34 +197,22 @@ end
 # ===================================================================================
 # max/min aggregation methods which always use zeroth-order interpolation
 # ===================================================================================
-function Base.max(ts::TimeSeries, vt::AbstractVector{<:Real})
-    indhint = Ref(firstindex(ts))
-    vals = fill(value(ts[begin])*0.0, length(vt)-1)
+"""
+max(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing) where T <: Number
 
-    for ii in firstindex(vt):(lastindex(vt)-1)
-        Δt = TimeInterval(vt[ii], vt[ii+1])
-        vals[ii] = max(ts, Δt, indhint=indhint)
-    end
-    return TimeSeries(vt[(begin+1):end], vals)
-end
-
-function Base.min(ts::TimeSeries, vt::AbstractVector{<:Real})
-    indhint = Ref(firstindex(ts))
-    vals = fill(value(ts[begin])*0.0, length(vt)-1)
-
-    for ii in firstindex(vt):(lastindex(vt)-1)
-        Δt = TimeInterval(vt[ii], vt[ii+1])
-        vals[ii] = min(ts, Δt, indhint=indhint)
-    end
-    return TimeSeries(vt[(begin+1):end], vals)
-end
-
-function Base.max(ts::TimeSeries, Δt::TimeInterval; indhint=nothing)
+Return the maximum timeseries over time interval Δt starting with the immediate previous value
+"""
+function Base.max(ts::TimeSeries, Δt::TimeInterval; indhint=nothing, order=0)
     x0 = value(interpolate(ts, Δt[begin], indhint=indhint, order=0))
     return max(x0, maximum(value, view(ts, Δt), init=-Inf))
 end
 
-function Base.min(ts::TimeSeries, Δt::TimeInterval; indhint=nothing)
+"""
+min(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing) where T <: Number
+
+Return the maximum timeseries over time interval Δt starting with the immediate previous value
+"""
+function Base.min(ts::TimeSeries, Δt::TimeInterval; indhint=nothing, order=0)
     x0 = value(interpolate(ts, Δt[begin], indhint=indhint, order=0))
     return min(x0, minimum(value, view(ts, Δt), init=Inf))
 end
