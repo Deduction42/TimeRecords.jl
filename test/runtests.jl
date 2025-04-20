@@ -36,42 +36,6 @@ end
     # Test time series
     ts = TimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
-    tse = TimeSeries{Float64}()
-
-    #Test indhint initialization
-    @test initialhint!(Ref(1), ts, 2.5)[] ≈ 2
-    @test initialhint!(Ref(1), ts, 0.5)[] ≈ 1
-
-    #Test extrapolation/interpolation
-    @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
-    @test values(interpolate(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]
-    @test value(interpolate(ts, 0, order=0)) ≈ 1
-    @test value(interpolate(ts, 0, order=1)) ≈ 1
-    @test value(interpolate(ts, 6, order=0)) ≈ 5
-    @test value(interpolate(ts, 6, order=1)) ≈ 5
-    @test ismissing(value(strictinterp(ts, 6, order=0)))
-
-    #Test aggregations
-    @test values(average(ts, t, order=0))  ≈ [1.5, 2.5]
-    @test values(average(ts, t, order=1))  ≈ [2, 3]
-    @test values(integrate(ts, t, order=0)) ≈ [1.5, 2.5]
-    @test values(integrate(ts, t, order=1)) ≈ [2, 3]
-    @test values(accumulate(ts, order=0)) ≈ [1, 3, 6, 10]
-    @test values(accumulate(ts, order=1)) ≈ [1.5, 4.0, 7.5, 12.0]
-    @test integrate(ts, TimeInterval(1.1, 1.3), order=0) ≈ 0.2
-    @test average(ts, TimeInterval(1.1, 1.3), order=0) ≈ 1.0
-    @test integrate(ts, TimeInterval(1.1, 1.3), order=1) ≈ 0.24
-    @test average(ts, TimeInterval(1.1, 1.3), order=1) ≈ 1.2
-
-    @test average(ts, TimeInterval(1,2), order=0) ≈ 1
-    @test average(ts, TimeInterval(1,2), order=1) ≈ 1.5
-    @test average(ts, TimeInterval(2,2), order=0) ≈ 2
-    @test average(ts, TimeInterval(2,2), order=1) ≈ 2
-
-    @test max(ts, TimeInterval(4,5)) == 5
-    @test max(ts, TimeInterval(4.1, 4.2)) == 4
-    @test min(ts, TimeInterval(4,5)) == 4
-    @test min(ts, TimeInterval(4.1,4.2)) == 4
 
     #Test merging timeseries
     ts2 = TimeSeries([1.5, 2.6], [1.5, 2.6])
@@ -97,6 +61,73 @@ end
     #Test mapvalues
     @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
     @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
+
+    
+    #Test keeplatest
+    @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
+    @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
+    @test keeplatest!(TimeSeries(1:5,1:5)) == TimeSeries([5],[5])
+    @test keeplatest!(TimeSeries{Float64}()) == TimeSeries{Float64}()
+    @test keeplatest!(TimeSeries{Float64}(), 4) == TimeSeries{Float64}()
+
+    ts = TimeSeries{Float64}(1:5, 1:5)
+    
+    #Test various operations
+    @test timestamps(ts) == 1:5
+    @test values(ts) == 1:5
+    @test eltype(ts) == Float64
+    @test eltype(TimeSeries{ComplexF64}) == ComplexF64
+    @test Vector(ts) == ts.records
+    @test ts[1:3] == TimeSeries{Float64}(1:3,1:3)
+    @test ts[[2,1,3]] == ts[1:3]
+    @test ts[:] == TimeSeries{Float64}(1:5,1:5)
+    @test ts[BitVector([1,1,1,0,0])] == TimeSeries{Float64}(1:3,1:3)
+    @test ts[TimeInterval(2:4)] == TimeSeries{Float64}(2:4,2:4)
+    @test ts[TimeInterval(1.5,4.5)] == TimeSeries{Float64}(2:4,2:4)
+    @test keepat!(deepcopy(ts), 2:3) == ts[2:3]
+    @test deleteat!(deepcopy(ts), 4:5) == ts[1:3]
+    @test push!(deepcopy(ts), TimeRecord(0,0)) == TimeSeries{Float64}(0:5,0:5)
+    @test push!(deepcopy(ts), TimeRecord(6,6)) == TimeSeries{Float64}(1:6,1:6)
+    @test push!(deepcopy(ts), TimeRecord(1.5,1.5)) == TimeSeries{Float64}([1;1.5;2:5], [1;1.5;2:5])
+    @test dropnan(TimeSeries{Float64}([1,2],[1,NaN])) == TimeSeries{Float64}([1],[1])
+    
+    ts1 = setindex!(deepcopy(ts), TimeRecord(1, NaN), 1)
+    @test ts1 == TimeSeries(1:5, [NaN;2:5])
+
+    #Various constructors and indexing
+    ts[1:3] .= 0
+    @test ts == TimeSeries{Float64}(1:5, [0,0,0,4,5])
+    
+    ts[1:3] = 1:3
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
+
+    ts[1:3] = TimeSeries(1:3,1:3)
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
+
+    ts[2] = TimeRecord(2.5,2)
+    @test ts == TimeSeries{Float64}([1,2.5,3,4,5], 1:5)
+
+    ts[2] = TimeRecord(2,2)
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
+
+    ts[2] = TimeRecord(3.5,2)
+    @test ts == TimeSeries{Float64}([1,3,3.5,4,5], [1,3,2,4,5])
+
+    ts[3] = TimeRecord(2,2)
+    @test ts == TimeSeries{Float64}(1:5,1:5)
+
+    ts[1:3] = TimeSeries(2:4, 1:3)
+    @test ts == TimeSeries{Float64}([2:4;4:5],1:5)
+
+    interval = TimeInterval(DateTime("2024-01-01T00:00:48.928"),DateTime("2024-01-01T00:00:49.115"))
+    dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
+    ts = TimeSeries(dates, 1:3)
+    @test getouter(ts, interval) == ts[1:2]
+end
+
+@testset "Timeseries lookups" begin
+    ts = TimeSeries{Float64}(1:5, 1:5)
+    tse = TimeSeries{Float64}()
 
     #Test findinner, findouter
     dt_before = TimeInterval(-5, -2)
@@ -143,47 +174,50 @@ end
     @test findouter(tse, dt_middle) == 1:0
     @test getinner(tse, dt_middle)  == tse[1:0]
     @test getouter(tse, dt_middle)  == tse[1:0]
-    
 
-    @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
-    @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
-    @test keeplatest!(TimeSeries(1:5,1:5)) == TimeSeries([5],[5])
-    @test keeplatest!(TimeSeries{Float64}()) == TimeSeries{Float64}()
-    @test keeplatest!(TimeSeries{Float64}(), 4) == TimeSeries{Float64}()
-
-    ts = TimeSeries{Float64}(1:5, 1:5)
-    
-    ts[1:3] .= 0
-    @test ts == TimeSeries{Float64}(1:5, [0,0,0,4,5])
-    
-    ts[1:3] = 1:3
-    @test ts == TimeSeries{Float64}(1:5, 1:5)
-
-    ts[1:3] = TimeSeries(1:3,1:3)
-    @test ts == TimeSeries{Float64}(1:5, 1:5)
-
-    ts[2] = TimeRecord(2.5,2)
-    @test ts == TimeSeries{Float64}([1,2.5,3,4,5], 1:5)
-
-    ts[2] = TimeRecord(2,2)
-    @test ts == TimeSeries{Float64}(1:5, 1:5)
-
-    ts[2] = TimeRecord(3.5,2)
-    @test ts == TimeSeries{Float64}([1,3,3.5,4,5], [1,3,2,4,5])
-
-    ts[3] = TimeRecord(2,2)
-    @test ts == TimeSeries{Float64}(1:5,1:5)
-
-    ts[1:3] = TimeSeries(2:4, 1:3)
-    @test ts == TimeSeries{Float64}([2:4;4:5],1:5)
-
-    interval = TimeInterval(DateTime("2024-01-01T00:00:48.928"),DateTime("2024-01-01T00:00:49.115"))
-    dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
-    ts = TimeSeries(dates, 1:3)
-    @test getouter(ts, interval) == ts[1:2]
 end
 
+@testset "Interpolation/Aggregation" begin
+    # Test time series
+    ts = TimeSeries{Float64}(1:5, 1:5)
+    t  = [1.5, 2.5, 3.5]
 
+    #Test indhint initialization
+    @test initialhint!(Ref(1), ts, 2.5)[] ≈ 2
+    @test initialhint!(Ref(1), ts, 0.5)[] ≈ 1
+
+    #Test extrapolation/interpolation
+    @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
+    @test values(interpolate(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]
+    @test value(interpolate(ts, 0, order=0)) ≈ 1
+    @test value(interpolate(ts, 0, order=1)) ≈ 1
+    @test value(interpolate(ts, 6, order=0)) ≈ 5
+    @test value(interpolate(ts, 6, order=1)) ≈ 5
+    @test ismissing(value(strictinterp(ts, 6, order=0)))
+    
+
+    #Test aggregations
+    @test values(average(ts, t, order=0))  ≈ [1.5, 2.5]
+    @test values(average(ts, t, order=1))  ≈ [2, 3]
+    @test values(integrate(ts, t, order=0)) ≈ [1.5, 2.5]
+    @test values(integrate(ts, t, order=1)) ≈ [2, 3]
+    @test values(accumulate(ts, order=0)) ≈ [1, 3, 6, 10]
+    @test values(accumulate(ts, order=1)) ≈ [1.5, 4.0, 7.5, 12.0]
+    @test integrate(ts, TimeInterval(1.1, 1.3), order=0) ≈ 0.2
+    @test average(ts, TimeInterval(1.1, 1.3), order=0) ≈ 1.0
+    @test integrate(ts, TimeInterval(1.1, 1.3), order=1) ≈ 0.24
+    @test average(ts, TimeInterval(1.1, 1.3), order=1) ≈ 1.2
+
+    @test average(ts, TimeInterval(1,2), order=0) ≈ 1
+    @test average(ts, TimeInterval(1,2), order=1) ≈ 1.5
+    @test average(ts, TimeInterval(2,2), order=0) ≈ 2
+    @test average(ts, TimeInterval(2,2), order=1) ≈ 2
+
+    @test max(ts, TimeInterval(4,5)) == 5
+    @test max(ts, TimeInterval(4.1, 4.2)) == 4
+    @test min(ts, TimeInterval(4,5)) == 4
+    @test min(ts, TimeInterval(4.1,4.2)) == 4
+end    
 
 @testset "TimeSeriesCollector" begin
     #=========================================================================

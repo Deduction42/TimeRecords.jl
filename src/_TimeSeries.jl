@@ -18,7 +18,7 @@ datetimes(ts::AbstractTimeSeries)   = datetime.(records(ts))
 Base.values(ts::AbstractTimeSeries) = value.(records(ts))
 Base.Vector(ts::AbstractTimeSeries) = Vector(records(ts))
 
-Base.eltype(::Type{AbstractTimeSeries{T}}) where T = T
+Base.eltype(::Type{<:AbstractTimeSeries{T}}) where T = T
 Base.eltype(ts::AbstractTimeSeries{T}) where T = T
 
 #Indexing where sorting isn't an issue
@@ -108,8 +108,8 @@ function Base.push!(ts::AbstractTimeSeries, tr::TimeRecord; indhint=nothing)
     return ts 
 end
   
-dropnan(ts::AbstractTimeSeries{<:Real}) = dropnan!(deepcopy(ts))
-function dropnan!(ts::AbstractTimeSeries{<:Real}) 
+dropnan(ts::AbstractTimeSeries{<:Number}) = dropnan!(deepcopy(ts))
+function dropnan!(ts::AbstractTimeSeries{<:Number}) 
     filter!(x->!isnan(value(x)), records(ts))
     return ts
 end
