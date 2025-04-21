@@ -22,6 +22,7 @@ julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
     @test string(TimeRecord(0,1)) == "TimeRecord{Int64}(t=1970-01-01T00:00:00, v=1)"
     @test string(TimeRecord(0,"this")) == "TimeRecord{String}(t=1970-01-01T00:00:00, v=\"this\")"
     @test merge(TimeRecord(0,1), TimeRecord(0,2)) == TimeRecord(0, (1,2))
+    @test merge(SVector, TimeRecord(0,1), TimeRecord(0,2)) == TimeRecord(0, SVector(1,2))
     @test_throws ArgumentError merge(TimeRecord(0,1), TimeRecord(1,1))
 
     @test string(TimeInterval(0,1)) == "1970-01-01T00:00:00 => 1970-01-01T00:00:01"
@@ -29,6 +30,7 @@ julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
     @test lastindex(TimeInterval(0,1)) == 2
     @test TimeInterval(0,1)[:] == SVector(0,1)
     @test size(TimeInterval(0,1)) == (2,)
+
 end
 
 
@@ -256,16 +258,31 @@ end
     @test average(ts, TimeInterval(1.1, 1.3), order=0) ≈ 1.0
     @test integrate(ts, TimeInterval(1.1, 1.3), order=1) ≈ 0.24
     @test average(ts, TimeInterval(1.1, 1.3), order=1) ≈ 1.2
+    @test_throws ArgumentError integrate(ts, TimeInterval(1.1, 1.3), order=3)
+    @test_throws ArgumentError integrate(ts[1], ts[2], order=3)
+    @test integrate(ts, TimeInterval(1.1, 1.1), order=1) ≈ 0.0
+    @test integrate(ts, TimeInterval(1.1, 1.1), order=0) ≈ 0.0
+    @test integrate(ts[1:0]) ≈ 0.0
 
+    @test (@test_logs (:warn, "Time interval (Δt) occurs completely before the timeseries history, results are likely inaccurate") integrate(ts, TimeInterval(-2,-1), order=0)) == 1.0
+    @test (@test_logs (:warn, "Time interval (Δt) occurs completely before the timeseries history, results are likely inaccurate") integrate(ts, TimeInterval(-2,-1), order=1)) == 1.0
+    @test (@test_logs (:warn, "Time interval (Δt) occurs completely after the timeseries history, results are likely inaccurate") integrate(ts, TimeInterval(8,9), order=1)) == 5.0
+    @test (@test_nowarn integrate(ts, TimeInterval(8,9), order=0)) == 5.0
+    
     @test average(ts, TimeInterval(1,2), order=0) ≈ 1
     @test average(ts, TimeInterval(1,2), order=1) ≈ 1.5
     @test average(ts, TimeInterval(2,2), order=0) ≈ 2
-    @test average(ts, TimeInterval(2,2), order=1) ≈ 2
+    @test average(ts, TimeInterval(2.5,2.5), order=1) ≈ 2.5
+    @test average(ts, TimeInterval(2.5,2.5), order=0) ≈ 2
 
     @test max(ts, TimeInterval(4,5)) == 5
     @test max(ts, TimeInterval(4.1, 4.2)) == 4
     @test min(ts, TimeInterval(4,5)) == 4
     @test min(ts, TimeInterval(4.1,4.2)) == 4
+    @test max(ts, 3:5) == [4,5]
+    @test min(ts, 3:5) == [3,4]
+
+
 end    
 
 @testset "TimeSeriesCollector" begin
