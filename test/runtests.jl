@@ -58,10 +58,18 @@ end
         SVector(5.0, 2.6, 2.6)
     ]
 
+    #Test merging without constructors
+    ts2 = TimeSeries([1.5, 2.6], [1.5, 2.6])
+    @test values(merge(vt, ts, ts2, order=0)) == [ 
+        (1.0, 1.5),
+        (1.0, 1.5),
+        (3.0, 2.6),
+        (5.0, 2.6)
+    ]
+
     #Test mapvalues
     @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
     @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
-
     
     #Test keeplatest
     @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
@@ -74,6 +82,7 @@ end
     
     #Test various operations
     @test timestamps(ts) == 1:5
+    @test datetimes(ts)  == unix2datetime.(1:5)
     @test values(ts) == 1:5
     @test eltype(ts) == Float64
     @test eltype(TimeSeries{ComplexF64}) == ComplexF64
@@ -90,7 +99,14 @@ end
     @test push!(deepcopy(ts), TimeRecord(6,6)) == TimeSeries{Float64}(1:6,1:6)
     @test push!(deepcopy(ts), TimeRecord(1.5,1.5)) == TimeSeries{Float64}([1;1.5;2:5], [1;1.5;2:5])
     @test dropnan(TimeSeries{Float64}([1,2],[1,NaN])) == TimeSeries{Float64}([1],[1])
-    
+    @test TimeInterval(ts) == TimeInterval(1,5)
+    @test_throws ArgumentError view(ts, [1,2,3])
+
+    ts_view = TimeRecords.TimeSeriesView(view(ts.records, 1:3))
+    @test view(ts, 1:3) == ts_view
+    @test view(ts, TimeInterval(1,3)) == ts_view
+    @test view(ts, BitVector([1,1,1,0,0])) == ts_view
+
     ts1 = setindex!(deepcopy(ts), TimeRecord(1, NaN), 1)
     @test ts1 == TimeSeries(1:5, [NaN;2:5])
 
