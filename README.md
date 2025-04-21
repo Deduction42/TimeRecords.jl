@@ -113,31 +113,6 @@ integrate(ts, t, indhint=indhint, order=1)
 ```
 and re-use indhint for every subsequent evaluation. This allows the integration step to save its final search result in `indhint` giving a strong recommendation for the next step on where to start, greatly reducing the need for searching.
 
-## Merging
-In many cases, it's desirable to have multivariate data where a full multivariate observation exists for every desired timestamp. However, it's often the case that different timestamps are available for different variables. The merging functionality finds the union of all timestamps and interpolates all timeseries, resulting in full multivariate observations for each timestamp. If desired timestamps are known, those can be provided. You can also provide a function to apply to the collection of observations (such as Vector, the default is Tuple)
-
-```
-merge(t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
-merge(f::Union{Function,Type}, t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
-merge(vts::AbstractTimeSeries...; order=0)
-merge(f::Union{Function,Type}, vts::AbstractTimeSeries...; order=0)
-
-ts2 = TimeSeries([1.5, 2.6], [1.5, 2.6])
->> 2-element TimeSeries{Float64}:
-    TimeRecord{Float64}(t=1970-01-01T00:00:01.500, v=1.5)
-    TimeRecord{Float64}(t=1970-01-01T00:00:02.600, v=2.6)
-
-merge(SVector, ts, ts2)
->> 7-element TimeSeries{SVector{2, Float64}}:
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:01, v=[1.0, 1.5])
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:01.500, v=[1.5, 1.5])
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:02, v=[2.0, 2.0])
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:02.600, v=[2.6, 2.6])
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:03, v=[3.0, 2.6])
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:04, v=[4.0, 2.6])
-    TimeRecord{SVector{2, Float64}}(t=1970-01-01T00:00:05, v=[5.0, 2.6])
-```
-
 ## TimeSeriesCollector
 A datatype that is used to collect tagged time record pairs `Pair{String, TimeRecord{T}}` and organize them as timeseries according to their labels.
 ```

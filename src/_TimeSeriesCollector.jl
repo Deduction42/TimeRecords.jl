@@ -1,7 +1,6 @@
 #==========================================================================================
 
 ==========================================================================================#
-include("tabular_form.jl")
 
 """
 TimeSeriesCollector{T}(interval::Second, delay::Second, timer::RefValue{DateTime}, data::Dict{String, TimeSeries{T}})
@@ -21,9 +20,9 @@ Used to collect tagged time records Pair{String=>TimeRecord{T}} arriving mostly 
     data  :: Dict{String, TimeSeries{T}} = Dict{String, TimeSeries{T}}()
     function TimeSeriesCollector{T}(interval, delay, timer, data) where T
         if interval < zero(interval)
-            error("interval must be non-negative")
+            throw(ArgumentError("interval must be non-negative"))
         elseif delay < zero(delay)
-            error("delay must be non-negative")
+            throw(ArgumentError("delay must be non-negative"))
         else
             return new{T}(interval, delay, timer, data)
         end
@@ -44,8 +43,8 @@ Notes:
  -  The function f must accept two arguments: (data::Dict{String,<:TimeSereis}, interval::TimeInterval)
  -  'interval' will be contained inside 'data' allowing for any desired interpolation scheme
 """
-function apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord})
-    data = apply!(collector, tagrecord)
+function apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}; warn_mismatch=false)
+    data = apply!(collector, tagrecord, warn_mismatch=warn_mismatch)
     if isnothing(data)
         return nothing
     else
@@ -86,9 +85,9 @@ Regardless of the outcome of 'take', 'tagrecord' will be appended to collector.d
 Notes:
  -  'interval' will be contained inside 'data' allowing for any desired interpolation scheme
 """
-function apply!(collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord})
+function apply!(collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}; warn_mismatch=false)
     result = take!(collector, datetime(tagrecord[2]))
-    push!(collector, tagrecord)
+    push!(collector, tagrecord, warn_mismatch=warn_mismatch)
     return result
 end
 
@@ -151,7 +150,7 @@ function Base.push!(collector::TimeSeriesCollector{T}, tagrecord::Pair{<:Abstrac
 end
 
 """
-calctimer(collector::TimeSeriesCollector, current::DateTime)
+next_interval_start(collector::TimeSeriesCollector, current::DateTime)
 
 Calculates the beginning of the next time interval given the current time
 """

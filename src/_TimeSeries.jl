@@ -1,7 +1,6 @@
 # =======================================================================================
 # Abstract interface for timeseries
 # =======================================================================================
-include("_TimeRecord.jl")
 
 """
 AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}}
@@ -18,8 +17,8 @@ datetimes(ts::AbstractTimeSeries)   = datetime.(records(ts))
 Base.values(ts::AbstractTimeSeries) = value.(records(ts))
 Base.Vector(ts::AbstractTimeSeries) = Vector(records(ts))
 
-Base.eltype(::Type{AbstractTimeSeries{T}}) where T = T
-Base.eltype(ts::AbstractTimeSeries{T}) where T = T
+valuetype(::Type{<:AbstractTimeSeries{T}}) where T = T
+valuetype(ts::AbstractTimeSeries{T}) where T = T
 
 #Indexing where sorting isn't an issue
 Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(records(ts), ind)
@@ -108,8 +107,8 @@ function Base.push!(ts::AbstractTimeSeries, tr::TimeRecord; indhint=nothing)
     return ts 
 end
   
-dropnan(ts::AbstractTimeSeries{<:Real}) = dropnan!(deepcopy(ts))
-function dropnan!(ts::AbstractTimeSeries{<:Real}) 
+dropnan(ts::AbstractTimeSeries{<:Number}) = dropnan!(deepcopy(ts))
+function dropnan!(ts::AbstractTimeSeries{<:Number}) 
     filter!(x->!isnan(value(x)), records(ts))
     return ts
 end
@@ -208,7 +207,7 @@ struct TimeSeriesView{T, P, I, LinIndex} <: AbstractTimeSeries{T}
     records :: SubArray{TimeRecord{T}, 1, P, I, LinIndex}
 end
 
-Base.view(ts::AbstractTimeSeries, ind::Any) = error("View of AbstractTimeSeries can only be indexed by a UnitRange or AbstractVector{Bool}")
+Base.view(ts::AbstractTimeSeries, ind::Any) = throw(ArgumentError("View of AbstractTimeSeries can only be indexed by a UnitRange or AbstractVector{Bool}"))
 Base.view(ts::AbstractTimeSeries, Δt::TimeInterval) = TimeSeriesView(view(records(ts), findinner(ts, Δt)))
 Base.view(ts::AbstractTimeSeries, ind::UnitRange) = TimeSeriesView(view(records(ts), ind))
 Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(view(records(ts), ind))
@@ -218,59 +217,47 @@ Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(vi
 # Merging functionality through extrapolation
 # =======================================================================================
 """
-Merges a set of timeseries to a common set of timestamps through extrapolation
-Produces a StaticVector for each timestamp
+    Base.merge(f::Union{Function,Type}, vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
+
+Merges a set of timeseries to a common set of timestamps through interpolation and applies 'f' to the resulting row
+If 'f' is not provided, 'tuple' is used
 """
-function Base.merge(t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
-    ts_extrap = map(ts->interpolate(ts,t, order=order), vts)
-    return _merge_records(ts_extrap...)
+function Base.merge(f::Union{Function,Type}, vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
+    indhints = initialhint.(vts, vt[1])
+    interpolated(t::Real) = map((ts,hint)->interpolate(ts, t, order=order, indhint=hint), vts, indhints)
+    return TimeSeries(map(t->TimeRecord(t, f(interpolated(t)...)), vt))
 end
 
-function Base.merge(f::Union{Function,Type}, t::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
-    ts_extrap = map(ts->interpolate(ts,t, order=order), vts)
-    return _merge_records(f, ts_extrap...)
+function Base.merge(vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
+    return merge(tuple, vt, vts..., order=order)
 end
 
-function _merge_records(f::Union{Function,Type}, uts::AbstractTimeSeries...)
-    return TimeSeries([merge(f, r...) for r in zip(uts...)])
-end
-
-function _merge_records(uts::AbstractTimeSeries...)
-    return TimeSeries([merge(r...) for r in zip(uts...)])
-end
-
-#=
-# =======================================================================================
-# Stateful timeseries
-# =======================================================================================
 """
-Timeseries that contains a reference to the latest value accessed
+Merges a set of timeseries though timestamp union
 """
-@kwdef struct StatefulTimeSeries{T} <: AbstractTimeSeries{T}
-    records :: Vector{TimeRecord{T}}
-    current :: Base.RefValue{Int64}
-    function StatefulTimeSeries{T}(records::AbstractVector{TimeRecord{T}}, ind::Base.RefValue=Ref(1); issorted=false) where T
-        if issorted
-            return new{T}(records, ind)
-        else
-            return new{T}(sort!(records), ind)
-        end
+function Base.merge(f::Union{Function,Type}, vts::AbstractTimeSeries...; order=0) 
+    return merge(f, timestamp_union(vts...), vts..., order=order)
+end
+
+function Base.merge(vts::AbstractTimeSeries...; order=0) 
+    return merge(timestamp_union(vts...), vts..., order=order)
+end
+
+"""
+Returns commmon timestamps for a collection of AbstractTimeSeries
+"""
+function timestamp_union(seriesitr)
+    tsunion = Set{Float64}()
+    for tseries in values(seriesitr)
+        union!(tsunion, (timestamp(tr) for tr in tseries))
     end
+    return sort!(collect(tsunion)) 
 end
 
-StatefulTimeSeries(ts::AbstractVector{TimeRecord{T}}) where T = StatefulTimeSeries{T}(ts, Ref(1))
-StatefulTimeSeries(ts::TimeSeries{T}) where T = StatefulTimeSeries{T}(records(ts), Ref(1), issorted=true)
-StatefulTimeSeries(t::AbstractVector{Real}, v::AbstractVector{T}) where T = StatefulTimeSeries(TimeSeries(t,v))
-
-current_value(ts::StatefulTimeSeries) = ts[ts.current[]]
-set_current_index!(ts::StatefulTimeSeries, ind::Integer) = Base.setindex!(ts.ind, ind)
-increment_index!(ts::StatefulTimeSeries) = set_current_index!(ts, ts.current[]+1)
-
-#Takes increments the current value and returns the next one
-function take_next!(ts::StatefulTimeSeries)
-    increment_index!(ts)
-    return current_value(ts)
+"""
+Returns commmon timestamps for a set of AbstractTimeSeries
+"""
+function timestamp_union(vts::AbstractTimeSeries...)
+    return timestamp_union(vts)
 end
-
-=#
 

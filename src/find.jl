@@ -1,5 +1,3 @@
-include("_TimeSeries.jl")
-
 """
 getinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer=firstindex(ts))
 
@@ -41,7 +39,7 @@ Stores the last value of hte index range for future use
 """
 function findinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Base.RefValue{<:Integer})
     ind = findinner(ts, Δt, indhint[])
-    indhint[] = ind[end]
+    indhint[] = isempty(ind) ? indhint[] : ind[end]
     return ind
 end
 
@@ -69,11 +67,9 @@ Finds the indices of the TimeSeries ts that surround the time interval Δt and s
 """
 function findouter(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Base.RefValue{<:Integer}) 
     ind = findouter(ts, Δt, indhint[])
-    indhint[] = ind[end]
+    indhint[] = isempty(ind) ? indhint[] : ind[end]
     return ind
 end
-
-_unitrange(x::Pair) = x[begin]:x[end]
 
 """
 findbounds(ts::AbstractTimeSeries, t::Real, indhint::Integer)

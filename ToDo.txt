@@ -1,6 +1,13 @@
 ToDo:
 
-1.  Add test coverage checks and a badge
-2.  Achieve > 95% test coverage
+1.  Achieve > 95% test coverage
+2.  Add support for mathematical operators and broadcasting
 3.  Add documentation
-4.  Add support for mathematical operators
+
+Breaking Changes:
+1.  `eltype(TimeSeries{T})` now returns TimeRecord{T} instead of `T`, if you wish to return `T` use `valuetype(TimeSeries{T})`
+2.  `interpolate(ts::TimeSeries, t::Real)` now returns a value instead of a TimeRecord (to be more consistent with aggregation API)
+3.  `interpolate(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
+4.  `aggregate(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
+5.  `integrate(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
+6.  `average(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
