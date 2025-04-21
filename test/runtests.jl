@@ -12,8 +12,8 @@ julia --startup-file=no --depwarn=yes --threads=auto --code-coverage=user --proj
 julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
 ====================================================================================================================================#
 @testset "TimeRecords" begin
-    @test TimeRecords.recordtype(TimeRecord(0,2.0+im)) == ComplexF64
-    @test TimeRecords.recordtype(TimeRecord{Int64}) == Int64
+    @test TimeRecords.valuetype(TimeRecord(0,2.0+im)) == ComplexF64
+    @test TimeRecords.valuetype(TimeRecord{Int64}) == Int64
     @test TimeRecords.update_time(TimeRecord(0,1), 1) == TimeRecord(1,1)
     @test promote(TimeRecord(0,1), TimeRecord(0,1.0)) === (TimeRecord(0,1.0), TimeRecord(0,1.0))  
     @test [TimeRecord(0,1), TimeRecord(0,missing)] isa Vector{TimeRecord{Union{Missing, Int64}}}
@@ -84,8 +84,10 @@ end
     @test timestamps(ts) == 1:5
     @test datetimes(ts)  == unix2datetime.(1:5)
     @test values(ts) == 1:5
-    @test eltype(ts) == Float64
-    @test eltype(TimeSeries{ComplexF64}) == ComplexF64
+    @test eltype(ts) == TimeRecord{Float64}
+    @test eltype(TimeSeries{ComplexF64}) == TimeRecord{ComplexF64}
+    @test valuetype(ts) == Float64
+    @test valuetype(TimeSeries{ComplexF64}) == ComplexF64
     @test Vector(ts) == ts.records
     @test ts[1:3] == TimeSeries{Float64}(1:3,1:3)
     @test ts[[2,1,3]] == ts[1:3]
@@ -236,9 +238,6 @@ end
 end    
 
 @testset "TimeSeriesCollector" begin
-    #=========================================================================
-    TimeSeriesCollector tests
-    =========================================================================#
     function as_tagged_series(d::Dict{String, TimeSeries{T}}) where T
         taggedrecord(tag::String, tr::TimeRecord) = TimeRecord(timestamp(tr), (k=tag, v=value(tr)))
         recordpair(tr::TimeRecord{<:NamedTuple{(:k,:v)}}) = value(tr).k => TimeRecord(timestamp(tr), value(tr).v)
@@ -253,11 +252,14 @@ end
         return getinner(data, TimeInterval(interval[1], interval[2]-1e-6))
     end
 
+    #=========================================================================
+    Testing for various intervals
+    =========================================================================#
     for dt in (Millisecond(0), Millisecond(1000), Millisecond(2500))
         for λt in (Millisecond(0), Millisecond(1), dt)
             #dt = Millisecond(0)
             #λt = Millisecond(1)
-            display((interval=dt, delay=λt))
+            #display((interval=dt, delay=λt))
 
             t0 = DateTime(2024,1,1,0,0,0)
             t1 = DateTime(2024,1,1,0,1,0)
@@ -326,5 +328,42 @@ end
             @test !anymismatches[]
         end
     end
+
+    #=========================================================================
+    Basic tests
+    =========================================================================#
+    t0 = DateTime(2024,1,1,0,0,0)
+    t1 = DateTime(2024,1,1,0,1,0)
+    vt = datetime2unix.(t0:Second(1):t1)
+    original = Dict(
+        "tag1" => TimeSeries(vt, vt),
+        "tag2" => TimeSeries(vt, vt)
+    )
+    inputseries = as_tagged_series(original)
+
+    #Constructor errors
+    @test_throws ArgumentError("interval must be non-negative") TimeSeriesCollector{Float64}(interval=-Second(1), delay=Second(10), timer=Ref(t0))
+    @test_throws ArgumentError("delay must be non-negative") TimeSeriesCollector{Float64}(interval=Second(1), delay=-Second(10), timer=Ref(t0))
+    @test TimeSeriesCollector(interval=Second(1), delay=Second(1), timer=Ref(t0), data=original) isa TimeSeriesCollector{Float64}
+
+    #Initial collector
+    collector  = TimeSeriesCollector{Float64}(interval=Second(1), delay=Second(2), timer=Ref(t0))
+    tag = inputseries[1][1]
+
+    #Test warnings for pushes
+    @test_logs (:warn, "Following tag '"*tag*"' does not exist in registry, creating new series") push!(collector, inputseries[1], warn_mismatch=true)
+    @test_nowarn push!(collector, inputseries[2])
+
+    #Simple callback function
+    function simple_callback(data::AbstractDict{<:AbstractString, <:AbstractTimeSeries}, Δt::TimeInterval)
+        v1 = interpolate(data["tag1"], Δt[end], order=0)
+        v2 = interpolate(data["tag2"], Δt[end], order=0)
+        return value(v1) + value(v2)
+    end
+
+    #Returns nothing before the execution time
+    @test isnothing(apply!(simple_callback, collector, t0))
+    @test fetch(apply!(simple_callback, deepcopy(collector), t0 + Second(5))) ≈ 3.4081344e9
+
 end
 

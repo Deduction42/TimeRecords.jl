@@ -3,3 +3,6 @@ ToDo:
 1.  Achieve > 95% test coverage
 2.  Add support for mathematical operators and broadcasting
 3.  Add documentation
+
+Breaking Changes:
+eltype(TimeSeries{T}) now returns TimeRecord{T} instead of `T`, if you wish to return `T` use `valuetype(TimeSeries{T})`

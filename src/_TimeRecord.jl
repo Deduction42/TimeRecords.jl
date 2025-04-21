@@ -1,8 +1,8 @@
 abstract type AbstractTimeRecord{T} end
 
 #Basic abstract functionality
-recordtype(x::AbstractTimeRecord{T}) where T = T
-recordtype(::Type{<:AbstractTimeRecord{T}}) where T = T
+valuetype(x::AbstractTimeRecord{T}) where T = T
+valuetype(::Type{<:AbstractTimeRecord{T}}) where T = T
 
 timestamp(x::AbstractTimeRecord) = x.t
 value(x::AbstractTimeRecord) = x.v

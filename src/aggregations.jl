@@ -178,7 +178,7 @@ function integrate(r1::TimeRecord, r2::TimeRecord; order=0)
     elseif order ==0
         return lastval_integral(r1, r2)
     else
-        error("Time integrals are only supported for hold-last-value (order=0) and trapezoidal (order=1)")
+        throw(ArgumentError("Time integrals are only supported for hold-last-value (order=0) and trapezoidal (order=1)"))
     end
 end
 

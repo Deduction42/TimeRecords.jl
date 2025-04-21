@@ -18,8 +18,8 @@ datetimes(ts::AbstractTimeSeries)   = datetime.(records(ts))
 Base.values(ts::AbstractTimeSeries) = value.(records(ts))
 Base.Vector(ts::AbstractTimeSeries) = Vector(records(ts))
 
-Base.eltype(::Type{<:AbstractTimeSeries{T}}) where T = T
-Base.eltype(ts::AbstractTimeSeries{T}) where T = T
+valuetype(::Type{<:AbstractTimeSeries{T}}) where T = T
+valuetype(ts::AbstractTimeSeries{T}) where T = T
 
 #Indexing where sorting isn't an issue
 Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(records(ts), ind)
