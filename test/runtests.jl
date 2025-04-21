@@ -11,7 +11,7 @@ julia --startup-file=no --depwarn=yes --threads=auto -e 'using Coverage; clean_f
 julia --startup-file=no --depwarn=yes --threads=auto --code-coverage=user --project=. -e 'using Pkg; Pkg.test(coverage=true)'
 julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
 ====================================================================================================================================#
-@testset "TimeRecords" begin
+@testset "TimeRecord basics" begin
     @test TimeRecords.valuetype(TimeRecord(0,2.0+im)) == ComplexF64
     @test TimeRecords.valuetype(TimeRecord{Int64}) == Int64
     @test TimeRecords.update_time(TimeRecord(0,1), 1) == TimeRecord(1,1)
@@ -32,7 +32,7 @@ julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
 end
 
 
-@testset "TimeSeries" begin
+@testset "TimeSeries basics" begin
     # Test time series
     ts = TimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
@@ -143,7 +143,7 @@ end
     @test getouter(ts, interval) == ts[1:2]
 end
 
-@testset "Timeseries lookups" begin
+@testset "TimeSeries find" begin
     ts = TimeSeries{Float64}(1:5, 1:5)
     tse = TimeSeries{Float64}()
 
@@ -193,6 +193,13 @@ end
     @test getinner(tse, dt_middle)  == tse[1:0]
     @test getouter(tse, dt_middle)  == tse[1:0]
 
+    @test findinner(ts, dt_between, Ref(1)) == 3:2
+    @test findouter(ts, dt_between, Ref(1)) == 2:3
+
+    @test TimeRecords.initialhint!(nothing, ts, 1.5)[] == 1
+    @test TimeRecords.initialhint!(2, ts, 1.5)[] == 1
+
+
 end
 
 @testset "Interpolation/Aggregation" begin
@@ -204,15 +211,30 @@ end
     @test initialhint!(Ref(1), ts, 2.5)[] ≈ 2
     @test initialhint!(Ref(1), ts, 0.5)[] ≈ 1
 
-    #Test extrapolation/interpolation
+    #Test nearest interpolation (missings are not possible)
     @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
     @test values(interpolate(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]
-    @test value(interpolate(ts, 0, order=0)) ≈ 1
-    @test value(interpolate(ts, 0, order=1)) ≈ 1
-    @test value(interpolate(ts, 6, order=0)) ≈ 5
-    @test value(interpolate(ts, 6, order=1)) ≈ 5
-    @test ismissing(value(strictinterp(ts, 6, order=0)))
-    
+    @test interpolate(ts, 0, order=0) ≈ 1
+    @test interpolate(ts, 0, order=1) ≈ 1
+    @test interpolate(ts, 6, order=0) ≈ 5
+    @test interpolate(ts, 6, order=1) ≈ 5
+
+    #Testing strict versions of interpolation (missings are possible)
+    missing_equal(v1::Missing, v2::Missing) = true
+    missing_equal(v1, v2) = (v1==v2)
+    @test mapreduce(missing_equal, &, values(strictinterp(ts, [0,2,3], order=0)), [missing, 2.0, 3.0])
+    @test mapreduce(missing_equal, &, values(strictinterp(ts, [0,2,3], order=1)), [missing, 2.0, 3.0])
+    @test values(strictinterp(ts, t, order=0)) ≈ [1, 2, 3]
+    @test values(strictinterp(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]
+    @test ismissing(strictinterp(ts, 6, order=0))
+    @test ismissing(strictinterp(ts, 6, order=1))
+
+    #Test errors for invalid orders
+    @test_throws ArgumentError interpolate(ts, 2.5, order=3)
+    @test_throws ArgumentError interpolate(ts, [2.5,3.5], order=3)
+    @test_throws ArgumentError interpolate(ts[1], ts[2], 2.5, order=3)
+    @test_throws ArgumentError strictinterp(ts, 2.5, order=3)
+    @test_throws ArgumentError strictinterp(ts, [2.5,3.5], order=3)
 
     #Test aggregations
     @test values(average(ts, t, order=0))  ≈ [1.5, 2.5]
@@ -358,7 +380,7 @@ end
     function simple_callback(data::AbstractDict{<:AbstractString, <:AbstractTimeSeries}, Δt::TimeInterval)
         v1 = interpolate(data["tag1"], Δt[end], order=0)
         v2 = interpolate(data["tag2"], Δt[end], order=0)
-        return value(v1) + value(v2)
+        return v1 + v2
     end
 
     #Returns nothing before the execution time

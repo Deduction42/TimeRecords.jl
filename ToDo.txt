@@ -5,4 +5,5 @@ ToDo:
 3.  Add documentation
 
 Breaking Changes:
-eltype(TimeSeries{T}) now returns TimeRecord{T} instead of `T`, if you wish to return `T` use `valuetype(TimeSeries{T})`
+1.  eltype(TimeSeries{T}) now returns TimeRecord{T} instead of `T`, if you wish to return `T` use `valuetype(TimeSeries{T})`
+2.  interpolate(ts::TimeSeries, t::Real) now returns a value instead of a TimeRecord (to be more consistent with aggregation API)

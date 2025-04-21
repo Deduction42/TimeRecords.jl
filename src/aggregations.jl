@@ -110,8 +110,8 @@ function integrate(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing
     bnd2 = clampedbounds(ts, Δt[end], bnd1[2])
 
     #Interpolate the end points Δt
-    tsL = interpolate(ts[bnd1[begin]], ts[bnd1[end]], Δt[begin], order=order)
-    tsU = interpolate(ts[bnd2[begin]], ts[bnd2[end]], Δt[end], order=order)
+    tsL = TimeRecord(Δt[begin], interpolate(ts[bnd1[begin]], ts[bnd1[end]], Δt[begin], order=order))
+    tsU = TimeRecord(Δt[end], interpolate(ts[bnd2[begin]], ts[bnd2[end]], Δt[end], order=order))
 
     #Shortcut if Δt occurs completely within two timestamps
     if bnd1[end] > bnd2[begin]
@@ -148,7 +148,7 @@ Finally, divide integral by the elapsed time of Δt
 function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing, order=0) where T
     dt = diff(Δt)
     if iszero(dt) #Interval is zero, simply interpolate for the average (limit when dt -> 0)
-        return value(interpolate(ts, Δt[begin], indhint=indhint, order=order))
+        return interpolate(ts, Δt[begin], indhint=indhint, order=order)
     else
         return integrate(ts, Δt, indhint=indhint, order=order)/dt
     end
@@ -203,7 +203,7 @@ max(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing) where T <: Nu
 Return the maximum timeseries over time interval Δt starting with the immediate previous value
 """
 function Base.max(ts::TimeSeries, Δt::TimeInterval; indhint=nothing, order=0)
-    x0 = value(interpolate(ts, Δt[begin], indhint=indhint, order=0))
+    x0 = interpolate(ts, Δt[begin], indhint=indhint, order=0)
     return max(x0, maximum(value, view(ts, Δt), init=-Inf))
 end
 
@@ -213,6 +213,6 @@ min(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhint=nothing) where T <: Nu
 Return the maximum timeseries over time interval Δt starting with the immediate previous value
 """
 function Base.min(ts::TimeSeries, Δt::TimeInterval; indhint=nothing, order=0)
-    x0 = value(interpolate(ts, Δt[begin], indhint=indhint, order=0))
+    x0 = interpolate(ts, Δt[begin], indhint=indhint, order=0)
     return min(x0, minimum(value, view(ts, Δt), init=Inf))
 end
