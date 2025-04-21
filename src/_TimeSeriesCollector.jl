@@ -1,7 +1,6 @@
 #==========================================================================================
 
 ==========================================================================================#
-include("tabular_form.jl")
 
 """
 TimeSeriesCollector{T}(interval::Second, delay::Second, timer::RefValue{DateTime}, data::Dict{String, TimeSeries{T}})

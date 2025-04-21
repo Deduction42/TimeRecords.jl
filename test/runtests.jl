@@ -66,6 +66,15 @@ end
         (3.0, 2.6),
         (5.0, 2.6)
     ]
+    @test values(merge(ts, ts2, order=0)) == [
+        (1.0, 1.5),
+        (1.0, 1.5),
+        (2.0, 1.5),
+        (2.0, 2.6),
+        (3.0, 2.6),
+        (4.0, 2.6),
+        (5.0, 2.6)
+    ]
 
     #Test mapvalues
     @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
@@ -212,8 +221,8 @@ end
     @test initialhint!(Ref(1), ts, 0.5)[] ≈ 1
 
     #Test nearest interpolation (missings are not possible)
-    @test values(interpolate(ts, t, order=0)) ≈ [1, 2, 3]
-    @test values(interpolate(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]
+    @test interpolate(ts, t, order=0) ≈ [1, 2, 3]
+    @test interpolate(ts, t, order=1) ≈ [1.5, 2.5, 3.5]
     @test interpolate(ts, 0, order=0) ≈ 1
     @test interpolate(ts, 0, order=1) ≈ 1
     @test interpolate(ts, 6, order=0) ≈ 5
@@ -222,10 +231,10 @@ end
     #Testing strict versions of interpolation (missings are possible)
     missing_equal(v1::Missing, v2::Missing) = true
     missing_equal(v1, v2) = (v1==v2)
-    @test mapreduce(missing_equal, &, values(strictinterp(ts, [0,2,3], order=0)), [missing, 2.0, 3.0])
-    @test mapreduce(missing_equal, &, values(strictinterp(ts, [0,2,3], order=1)), [missing, 2.0, 3.0])
-    @test values(strictinterp(ts, t, order=0)) ≈ [1, 2, 3]
-    @test values(strictinterp(ts, t, order=1)) ≈ [1.5, 2.5, 3.5]
+    @test mapreduce(missing_equal, &, strictinterp(ts, [0,2,3], order=0), [missing, 2.0, 3.0])
+    @test mapreduce(missing_equal, &, strictinterp(ts, [0,2,3], order=1), [missing, 2.0, 3.0])
+    @test strictinterp(ts, t, order=0) ≈ [1, 2, 3]
+    @test strictinterp(ts, t, order=1) ≈ [1.5, 2.5, 3.5]
     @test ismissing(strictinterp(ts, 6, order=0))
     @test ismissing(strictinterp(ts, 6, order=1))
 
@@ -237,12 +246,12 @@ end
     @test_throws ArgumentError strictinterp(ts, [2.5,3.5], order=3)
 
     #Test aggregations
-    @test values(average(ts, t, order=0))  ≈ [1.5, 2.5]
-    @test values(average(ts, t, order=1))  ≈ [2, 3]
-    @test values(integrate(ts, t, order=0)) ≈ [1.5, 2.5]
-    @test values(integrate(ts, t, order=1)) ≈ [2, 3]
-    @test values(accumulate(ts, order=0)) ≈ [1, 3, 6, 10]
-    @test values(accumulate(ts, order=1)) ≈ [1.5, 4.0, 7.5, 12.0]
+    @test average(ts, t, order=0)  ≈ [1.5, 2.5]
+    @test average(ts, t, order=1)  ≈ [2, 3]
+    @test integrate(ts, t, order=0) ≈ [1.5, 2.5]
+    @test integrate(ts, t, order=1) ≈ [2, 3]
+    @test accumulate(ts, order=0) ≈ [1, 3, 6, 10]
+    @test accumulate(ts, order=1) ≈ [1.5, 4.0, 7.5, 12.0]
     @test integrate(ts, TimeInterval(1.1, 1.3), order=0) ≈ 0.2
     @test average(ts, TimeInterval(1.1, 1.3), order=0) ≈ 1.0
     @test integrate(ts, TimeInterval(1.1, 1.3), order=1) ≈ 0.24

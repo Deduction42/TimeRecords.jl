@@ -1,15 +1,13 @@
-include("find.jl")
-
 #=======================================================================================================================
 ToDo:
 (4) Create "getindex" functions for timeseries that uses interpolation (by default) or extrapolation
      -  global settings should include: DEFAULT_ORDER, DEFAULT_INDEXER
 =======================================================================================================================#
 """
-interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
+    interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
 
-Extrapolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
-Returns an ordinary TimeSeries with timestamps at vt
+Interpolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
+Returns a vector of values corresponding to timestamps vt
 Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
 """
 function interpolate(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0, indhint=nothing)
@@ -24,10 +22,11 @@ end
 
 
 """
-strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
+    strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0)
 
 Interpolates timeseries ts::AbstractTimeSeries, at times vt::AbstractVector{Real}
-Returns an ordinary TimeSeries with timestamps at vt
+If timestamp t is not bounded by the series, `missing` is returned
+Returns a vector of values corresponding to timestamps vt
 Keyword "order" selects algorithm: Supports zero-order-hold (order=0) and first-order-interpolation (order=1)
 """
 function strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:Real}}; order=0, indhint=nothing)
@@ -41,9 +40,9 @@ function strictinterp(ts::AbstractTimeSeries, t::Union{<:Real, AbstractVector{<:
 end
 
 """
-interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
+    interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
 
-Extrapolates from two time records (r1, r2) at point t using either zero-order hold (order=0) or saturated-linear (order=1)
+Interpolates from two time records (r1, r2) at point t using either zero-order hold (order=0) or saturated-linear (order=1)
 """
 function interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
     if order == 0
@@ -56,29 +55,32 @@ function interpolate(r1::TimeRecord, r2::TimeRecord, t::Real; order=0)
 end
 
 """
-Extrapolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point algorithm
+    interpolate(f_extrap::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; indhint=nothing)
+
+Interpolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point algorithm
 Current two-point algorithms that are supported are zero-order-hold, first-order-interpolation
 """
 function interpolate(f_extrap::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; indhint=nothing)
-    sortvt  = sort(vt)
-    newhint = initialhint!(indhint, ts, first(sortvt))
-    vals = map(t->interpolate(f_extrap, ts, t, indhint=newhint), sortvt)
-    return TimeSeries(sortvt, vals)
+    issorted(vt) || ArgumentError("Timestamps must be sorted")
+    newhint = initialhint!(indhint, ts, first(vt))
+    return map(t->interpolate(f_extrap, ts, t, indhint=newhint), vt)
 end
 
 """
+    strictinterp(f_interp::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; indhint=nothing)
+
 Interpolates a TimeSeries ts::AbstractTimeSeries at timestamps vt::AbstractVector{<:Real} using a two-point interpolation algorithm f_interp
+If teh timestamp is not inside the timeseries interval, 'missing' is returned
 Current two-point algorithms that are supported are zero-order-hold, first-order-interpolation
 """
 function strictinterp(f_interp::Function, ts::AbstractTimeSeries, vt::AbstractVector{<:Real}; indhint=nothing)
-    sortvt  = sort(vt)
-    newhint = initialhint!(indhint, ts, first(sortvt)) 
-    vals = map(t->strictinterp(f_interp, ts, t, indhint=newhint), sortvt)
-    return TimeSeries(sortvt, vals)
+    issorted(vt) || ArgumentError("Timestamps must be sorted")
+    newhint = initialhint!(indhint, ts, first(vt)) 
+    return map(t->strictinterp(f_interp, ts, t, indhint=newhint), vt)
 end
 
 """
-interpolate(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{Nothing,Integer,<:RefValue{<:Integer}})
+    interpolate(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{Nothing,Integer,<:RefValue{<:Integer}})
 
 Single extrapolation at time t::Real, provide an indhint for faster searching
 """
@@ -88,7 +90,7 @@ function interpolate(f_interp::Function, ts::AbstractTimeSeries, t::Real; indhin
 end
 
 """
-strictinterp(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{Nothing,Integer,<:RefValue{<:Integer}})
+    strictinterp(f_interp::Function, ts::AbstractTimeSeries, t::Real, indhint::Union{Nothing,Integer,<:RefValue{<:Integer}})
 
 Single interpolation at time t::Real, provide an indhint for faster searching
 Will return TimeRecord{t, Missing} if t is not within the range of the timeseries

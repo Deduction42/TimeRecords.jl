@@ -1,5 +1,3 @@
-include("_TimeSeries.jl")
-
 """
 getinner(ts::AbstractTimeSeries, Δt::TimeInterval, indhint::Integer=firstindex(ts))
 
