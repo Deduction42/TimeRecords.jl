@@ -5,9 +5,9 @@ ToDo:
 3.  Add documentation
 
 Breaking Changes:
-1.  eltype(TimeSeries{T}) now returns TimeRecord{T} instead of `T`, if you wish to return `T` use `valuetype(TimeSeries{T})`
-2.  interpolate(ts::TimeSeries, t::Real) now returns a value instead of a TimeRecord (to be more consistent with aggregation API)
-3.  interpolate(ts::TimeSeries, t::AbstractVector{<:Real}) now returns only interpolated values, not TimeSeries
-4.  aggregate(ts::TimeSeries, t::AbstractVector{<:Real}) now returns only interpolated values, not TimeSeries
-5.  integrate(ts::TimeSeries, t::AbstractVector{<:Real}) now returns only interpolated values, not TimeSeries
-6.  average(ts::TimeSeries, t::AbstractVector{<:Real}) now returns only interpolated values, not TimeSeries
+1.  `eltype(TimeSeries{T})` now returns TimeRecord{T} instead of `T`, if you wish to return `T` use `valuetype(TimeSeries{T})`
+2.  `interpolate(ts::TimeSeries, t::Real)` now returns a value instead of a TimeRecord (to be more consistent with aggregation API)
+3.  `interpolate(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
+4.  `aggregate(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
+5.  `integrate(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
+6.  `average(ts::TimeSeries, t::AbstractVector{<:Real})` now returns only interpolated values, not TimeSeries
