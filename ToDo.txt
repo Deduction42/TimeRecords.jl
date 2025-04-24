@@ -1,26 +1,11 @@
 ToDo:
 
-1.  Add "Plots" recipe
+1.  Add support for mathematical operators and broadcasting
+2.  Add documentation
+
+Plot Recipe notes (in case of improvements):
     - https://docs.juliaplots.org/latest/RecipesBase/syntax/
     - potential solution:
         @recipe f(ts::TimeSeries; use_dates=true) = use_dates ? (datetimes(ts), values(ts)) : (timestamps(ts), values(ts))
     - more advanced functionality (potetially resolution, and you definitely want rotation)
         https://discourse.julialang.org/t/plots-with-formatted-datetime-xticks/48649
-
-2.  Add support for mathematical operators and broadcasting
-3.  Add documentation
-
-@recipe function f(ts::TimeSeries; use_dates=true)
-    if !use_dates
-        return (timestamps(ts), values(ts))
-    else
-        xrot --> 30
-
-        dt = diff(TimeInterval(ts))
-        if dt < 24*3600
-            return (Time.(datetime.(ts)), values(ts))
-        else
-            return (datetimes(ts), values(ts))
-        end
-    end
-end
