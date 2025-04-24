@@ -261,3 +261,19 @@ function timestamp_union(vts::AbstractTimeSeries...)
     return timestamp_union(vts)
 end
 
+
+#Recipe for plotting timeseries
+@recipe function f(ts::TimeSeries; use_dates=true)
+    if !use_dates
+        return (timestamps(ts), values(ts))
+    else
+        xrot --> 20
+
+        dt = diff(TimeInterval(ts))
+        if dt < 24*3600
+            return (Time.(datetime.(ts)), values(ts))
+        else
+            return (datetimes(ts), values(ts))
+        end
+    end
+end
