@@ -4,6 +4,7 @@ using StaticArrays
 using Dates
 using TestItems: @testitem
 using TestItemRunner
+using Plots
 
 #====================================================================================================================================
 Run these commands at startup to see coverage
@@ -152,6 +153,11 @@ end
     dates = [DateTime("2024-01-01T00:00:48.393"), DateTime("2024-01-01T00:00:49.275"), DateTime("2024-01-01T00:00:50.470")]
     ts = TimeSeries(dates, 1:3)
     @test getouter(ts, interval) == ts[1:2]
+
+    @test plot(ts) isa Plots.Plot
+    @test plot(ts, use_dates=false) isa Plots.Plot
+    jan_hours = 0:3600:(24*3600*31)
+    @test plot(TimeSeries(jan_hours, jan_hours)) isa Plots.Plot
 end
 
 @testset "TimeSeries find" begin

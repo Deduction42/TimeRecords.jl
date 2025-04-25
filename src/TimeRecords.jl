@@ -1,6 +1,7 @@
 module TimeRecords
     using StaticArrays
     using Dates
+    using RecipesBase
 
     include("_TimeRecord.jl")
     include("_TimeSeries.jl")
