@@ -267,7 +267,7 @@ end
     if !use_dates
         return (timestamps(ts), values(ts))
     else
-        xrot --> 20
+        xrot --> -10
 
         dt = diff(TimeInterval(ts))
         if dt < 24*3600
