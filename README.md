@@ -86,6 +86,13 @@ Some additional notes on TimeSeries and its chronological API
 -  `setindex(ts::AbstractTimeSeries, vr::AbstractVector{TimeRecord}, ind)` overwrites values in `records(ts)` and then sorts
 -  `records(ts::AbstractTimeSeries)` will return the internal timeseries vector, but care must be taken with mutation in order to prevent violating the inherent chronological assumptions of the TimeSeries
 
+This package also includes a plotting recipe to plot timeseries as `(timestamp.(ts), value.(ts))` pairs, making it convenient to plot time series and even subsections over intervals
+```
+using Plots
+plot(ts)
+dt = TimeInterval(DateTime("1970-01-01T00:00:01") => DateTime("1970-01-01T00:00:03"))
+plot(ts[dt])
+```
 ## Interpolation
 The first major functionality supported is interpolation. Supported interpolation methods are zero-order-hold (order=0) or linear (order=1). 
 

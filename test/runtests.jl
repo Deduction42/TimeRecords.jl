@@ -5,6 +5,7 @@ using Dates
 using TestItems: @testitem
 using TestItemRunner
 using Plots
+using Aqua 
 
 #====================================================================================================================================
 Run these commands at startup to see coverage
@@ -421,3 +422,6 @@ end
 
 end
 
+@testset "Aqua.jl" begin
+    Aqua.test_all(TimeRecords)
+end
