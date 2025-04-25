@@ -1,5 +1,7 @@
 [![Build Status](https://github.com/Deduction42/TimeRecords.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/Deduction42/TimeRecords.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage Status](https://coveralls.io/repos/github/Deduction42/TimeRecords.jl/badge.svg?branch=DEV)](https://coveralls.io/github/Deduction42/TimeRecords.jl?branch=DEV)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
+
 
 # TimeRecords
 A common problem encountered with timeseries analysis is that most multivariate algorithms require complete observations (all components) for a given timestamp, but in many situations, data from different components are sampled at different timestamps. This is particularly common with industrial historians and streaming IoT applications based on MQTT protocols or similar where data arrives one record at a time (in somewhat chronological order), from different devices at different sampling rates. This package matches the record-driven format common in these environments and supports common operations used to transform this data into formats commonly required by multivariate time series algorithms. As such, it is not a competitor to other time series packages like TimeSeries.jl, but complementary, providing operations that can transform record-driven data into formats they can use. These operations include:
@@ -86,6 +88,13 @@ Some additional notes on TimeSeries and its chronological API
 -  `setindex(ts::AbstractTimeSeries, vr::AbstractVector{TimeRecord}, ind)` overwrites values in `records(ts)` and then sorts
 -  `records(ts::AbstractTimeSeries)` will return the internal timeseries vector, but care must be taken with mutation in order to prevent violating the inherent chronological assumptions of the TimeSeries
 
+This package also includes a plotting recipe to plot timeseries as `(timestamp.(ts), value.(ts))` pairs, making it convenient to plot time series and even subsections over intervals
+```
+using Plots
+plot(ts)
+dt = TimeInterval(DateTime("1970-01-01T00:00:01") => DateTime("1970-01-01T00:00:03"))
+plot(ts[dt])
+```
 ## Interpolation
 The first major functionality supported is interpolation. Supported interpolation methods are zero-order-hold (order=0) or linear (order=1). 
 

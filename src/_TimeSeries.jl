@@ -222,25 +222,26 @@ Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(vi
 Merges a set of timeseries to a common set of timestamps through interpolation and applies 'f' to the resulting row
 If 'f' is not provided, 'tuple' is used
 """
-function Base.merge(f::Union{Function,Type}, vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
+function Base.merge(f::Union{Function,Type}, vt::AbstractVector{<:Real}, ts1::AbstractTimeSeries, tsN::AbstractTimeSeries...; order=0)
+    vts = (ts1, tsN...)
     indhints = initialhint.(vts, vt[1])
     interpolated(t::Real) = map((ts,hint)->interpolate(ts, t, order=order, indhint=hint), vts, indhints)
     return TimeSeries(map(t->TimeRecord(t, f(interpolated(t)...)), vt))
 end
 
-function Base.merge(vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
-    return merge(tuple, vt, vts..., order=order)
+function Base.merge(vt::AbstractVector{<:Real}, ts1::AbstractTimeSeries, tsN::AbstractTimeSeries...; order=0)
+    return merge(tuple, vt, ts1, tsN..., order=order)
 end
 
 """
 Merges a set of timeseries though timestamp union
 """
-function Base.merge(f::Union{Function,Type}, vts::AbstractTimeSeries...; order=0) 
-    return merge(f, timestamp_union(vts...), vts..., order=order)
+function Base.merge(f::Union{Function,Type}, ts1::AbstractTimeSeries, tsN::AbstractTimeSeries...; order=0)
+    return merge(f, timestamp_union(ts1, tsN...), ts1, tsN..., order=order)
 end
 
-function Base.merge(vts::AbstractTimeSeries...; order=0) 
-    return merge(timestamp_union(vts...), vts..., order=order)
+function Base.merge(ts1::AbstractTimeSeries, tsN::AbstractTimeSeries...; order=0) 
+    return merge(timestamp_union(ts1, tsN...), ts1, tsN..., order=order)
 end
 
 """
@@ -267,7 +268,7 @@ end
     if !use_dates
         return (timestamps(ts), values(ts))
     else
-        xrot --> 20
+        xrot --> -10
 
         dt = diff(TimeInterval(ts))
         if dt < 24*3600

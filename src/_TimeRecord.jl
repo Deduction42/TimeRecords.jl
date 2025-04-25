@@ -36,19 +36,20 @@ Base.show(io::IO, mime::MIME"text/plain", tr::TimeRecord) = show(io, tr)
 """
 Merge multiple time record with the same timestamp and apply the function "f" to the results
 """
-function Base.merge(f::Union{Type,Function}, vtr::TimeRecord...)
-    mtr = merge(vtr...)
+function Base.merge(f::Union{Type,Function}, tr::TimeRecord, vtr::TimeRecord...)
+    mtr = merge(tr, vtr...)
     return TimeRecord(vtr[1].t, f(value(mtr)...))
 end 
 
 """
 Merge multiple time records with the same timestamp as a tuple
 """
-function Base.merge(vtr::TimeRecord...)
-    if !allequal(timestamp.(vtr))
+function Base.merge(tr::TimeRecord, vtr::TimeRecord...)
+    str = (tr, vtr...)
+    if !allequal(timestamp.(str))
         throw(ArgumentError("Cannot merge time records for different timestamps"))
     end
-    return TimeRecord(vtr[begin].t, value.(vtr))
+    return TimeRecord(str[begin].t, value.(str))
 end
 
 
