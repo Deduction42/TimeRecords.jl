@@ -1,7 +1,8 @@
 ToDo:
 
 1.  Add support for mathematical operators and broadcasting
-2.  Add documentation
+2.  Add toggle option to avoid displaying as "DateTime" (in case someone uses a different offset for precision)
+3.  Add documentation
 
 Plot Recipe notes (in case of improvements):
     - https://docs.juliaplots.org/latest/RecipesBase/syntax/
