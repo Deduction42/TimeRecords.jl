@@ -10,12 +10,14 @@ ToDo:
 3.  Add RegularTimeSeries with special "find" methods (that would be very fast)
     - internals contains: (1)<timstamps> a Range and (2)<values> a Vector of raw values
     - getindex returns the constructed TimeRecord
+    - setindex on a timerecord the value if the timestamp matches
     - `timeseries(t, v)` will return RegularTimeSeries if t is an abstract range
     - re-evaluate the use of AbstractTimeSeries in some functions (push! in particular)
+    - may need to do some custom broadcasting
 4.  Add documentation
 5.  Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) which retrieves the closest value if the date is approximate, "nothing" otherwise
     - add "setindex!(ts, v, t::Union{DateTime,Float64}) which returns an error if the nearest value isn't approximate"
-    
+
 Plot Recipe notes (in case of improvements):
     - https://docs.juliaplots.org/latest/RecipesBase/syntax/
     - potential solution:
