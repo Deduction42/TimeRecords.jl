@@ -1,12 +1,21 @@
 ToDo:
-
-1.  Add toggle option to avoid displaying as "DateTime" (in case someone uses a different offset for precision)
-2.  Add RegularTimeSeries with special "find" methods (that would be very fast)
-    - internals contains: (1)<timstamps> an abstract range and (2)<values> a vector of raw values
+1.  Add tests for math functions, bump version
+2.  Have options for dealing with datetime precision issues
+    - Have a global constant called UNIX_ORIGIN = Ref(datetime2unix(origin_date))
+    - Create conversion functions: 
+        float2datetime(x) = unix2datetime(x + UNIX_ORIGIN[])
+        datetime2float(x) = datetime2unix(x) - UNIX_ORIGIN[]
+        date_origin(x::DateTime) = setindex!(UNIX_ORIGIN, datetime2unix(x))
+    - Add toggle option to display times as float instead of "DateTime"
+3.  Add RegularTimeSeries with special "find" methods (that would be very fast)
+    - internals contains: (1)<timstamps> a Range and (2)<values> a Vector of raw values
     - getindex returns the constructed TimeRecord
     - `timeseries(t, v)` will return RegularTimeSeries if t is an abstract range
-3.  Add documentation
-
+    - re-evaluate the use of AbstractTimeSeries in some functions (push! in particular)
+4.  Add documentation
+5.  Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) which retrieves the closest value if the date is approximate, "nothing" otherwise
+    - add "setindex!(ts, v, t::Union{DateTime,Float64}) which returns an error if the nearest value isn't approximate"
+    
 Plot Recipe notes (in case of improvements):
     - https://docs.juliaplots.org/latest/RecipesBase/syntax/
     - potential solution:
