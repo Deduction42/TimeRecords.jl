@@ -1,21 +1,30 @@
 ToDo:
-1.  Add tests for math functions, bump version
-2.  Have options for dealing with datetime precision issues
-    - Have a global constant called UNIX_ORIGIN = Ref(datetime2unix(origin_date))
+v2.02 Add tests for math functions and broadcasting, bump version
+
+v2.03 Have options for dealing with datetime precision issues
+    - Float64 in Unix will only have microsecond precision near our date if the origin is Epoch
+        - Much finer precision can be obtained by moving the origin closer to now
+        - Changing the reference point only changes how "dates" are displayed
+    - Have a global constant called ORIGIN_FLOAT = Ref(datetime2unix(origin_date))
     - Create conversion functions: 
-        float2datetime(x) = unix2datetime(x + UNIX_ORIGIN[])
-        datetime2float(x) = datetime2unix(x) - UNIX_ORIGIN[]
-        date_origin(x::DateTime) = setindex!(UNIX_ORIGIN, datetime2unix(x))
+        float2datetime(x) = unix2datetime(x + ORIGIN_FLOAT[])
+        datetime2float(x) = datetime2unix(x) - ORIGIN_FLOAT[]
+        date_origin(x::DateTime) = setindex!(ORIGIN_FLOAT, datetime2unix(x))
     - Add toggle option to display times as float instead of "DateTime"
-3.  Add RegularTimeSeries with special "find" methods (that would be very fast)
+        - This lives inside the "Base.show" function
+
+v2.04 Add RegularTimeSeries with special "find" methods (that would be very fast)
     - internals contains: (1)<timstamps> a Range and (2)<values> a Vector of raw values
     - getindex returns the constructed TimeRecord
     - setindex on a timerecord the value if the timestamp matches
     - `timeseries(t, v)` will return RegularTimeSeries if t is an abstract range
     - re-evaluate the use of AbstractTimeSeries in some functions (push! in particular)
     - may need to do some custom broadcasting
-4.  Add documentation
-5.  Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) which retrieves the closest value if the date is approximate, "nothing" otherwise
+
+v2.05 Add documentation
+
+v2.06 Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) 
+    - retrieves the closest value if the date is approximate, "nothing" otherwise
     - add "setindex!(ts, v, t::Union{DateTime,Float64}) which returns an error if the nearest value isn't approximate"
 
 Plot Recipe notes (in case of improvements):
