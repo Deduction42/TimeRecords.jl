@@ -29,8 +29,8 @@ Base.convert(::Type{TimeRecord{T}}, x::TimeRecord) where T = TimeRecord{T}(times
 Base.promote_typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.promote_typejoin(R1,R2)}
 Base.typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.typejoin(R1,R2)}
 
-Base.show(io::IO, tr::TimeRecord{T}) where T = print(io, "TimeRecord{$(T)}(t=$(unix2datetime(tr.t)), v=$(tr.v))")
-Base.show(io::IO, tr::TimeRecord{T}) where T<:AbstractString = print(io, "TimeRecord{$(T)}(t=$(unix2datetime(tr.t)), v=\"$(tr.v)\")")
+Base.show(io::IO, tr::TimeRecord{T}) where T = print(io, "TimeRecord{$(T)}(t=$(isnan(tr.t) ? missing : unix2datetime(tr.t)), v=$(tr.v))")
+Base.show(io::IO, tr::TimeRecord{T}) where T<:AbstractString = print(io, "TimeRecord{$(T)}(t=$(isnan(tr.t) ? missing : unix2datetime(tr.t)), v=\"$(tr.v)\")")
 Base.show(io::IO, mime::MIME"text/plain", tr::TimeRecord) = show(io, tr)
 
 """

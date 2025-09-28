@@ -1,5 +1,12 @@
 ToDo:
 v2.02 Add tests for math functions and broadcasting, bump version
+    - setindex! shouldn't check for equality, just chronology 
+        - this is a more flexible insertion that can avoid performance footguns
+        - error on "non-chronological insertions", and suggest "deleteat!(ts, ind); push!(ts, x)"
+        - "ischronological" checking should automatically pass where adjacent timestamps are NaN
+    - undefined initializers are too complex to initialize with NaN just use Vector{TimeRecord}
+
+
 
 v2.03 Have options for dealing with datetime precision issues
     - Float64 in Unix will only have microsecond precision near our date if the origin is Epoch

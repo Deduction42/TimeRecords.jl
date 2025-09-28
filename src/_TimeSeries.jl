@@ -33,23 +33,22 @@ function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries
 end
 
 #Set index basesd on value only (maintains the same timestamp to guarantee sorting)
-function Base.setindex!(ts::AbstractTimeSeries{T}, x, ind::Integer) where T 
-    setindex!(records(ts), TimeRecord(timestamp(ts[ind]), T(x)), ind)
+function Base.setindex!(ts::AbstractTimeSeries{T}, x::Any, ind::Integer) where T 
+    setindex!(records(ts), TimeRecord(timestamp(ts[ind]), convert(T,x)), ind)
     return ts 
 end
 
 #Sets multiple indices based on value only
-function Base.setindex!(ts::AbstractTimeSeries{T}, X::AbstractArray, inds::AbstractVector) where T
+function Base.setindex!(ts::AbstractTimeSeries{T}, X::Any, inds::AbstractVector{<:Integer}) where T
     Base.setindex_shape_check(X, length(inds))
-    ix0 = firstindex(X)
     for (count, ind) in enumerate(inds)
-        x = T(X[ix0+count-1])
+        x = convert(T, X[begin + (count-1)])
         setindex!(records(ts), TimeRecord(timestamp(ts[ind]), x), ind)
     end
     return ts 
 end
 
-#Set index checks for timestamp equality, but other wise deletes element [i] and uses that as the inertion hint
+#Set index checks for timestamp equality, but other wise deletes element [i] and uses that as the insertion hint
 function Base.setindex!(ts::AbstractTimeSeries{T}, r::TimeRecord, ind::Integer) where T
     if timestamp(r) == timestamp(ts[ind])
         setindex!(records(ts), r, ind)
@@ -61,7 +60,7 @@ function Base.setindex!(ts::AbstractTimeSeries{T}, r::TimeRecord, ind::Integer) 
 end
 
 #Set multiple indices and then sort the timeseries
-function Base.setindex!(ts::AbstractTimeSeries{T}, vr::AbstractVector{<:TimeRecord}, ind::AbstractVector) where T
+function Base.setindex!(ts::AbstractTimeSeries{T}, vr::AbstractVector{<:TimeRecord}, ind::AbstractVector{<:Integer}) where T
     setindex!(records(ts), vr, ind)
     sort!(ts)
     return ts
@@ -172,7 +171,7 @@ Creates a time interval based on the beginning and end of the timeseries
 TimeInterval(ts::AbstractTimeSeries) = TimeInterval(timestamp.((ts[begin],ts[end])))
 
 # =======================================================================================
-# Regular timeseries
+# Basic Timeseries (only assumes sorted)
 # =======================================================================================
 """
 Constructs a time series from time records, will sort input in-place unless issorted=false
@@ -196,6 +195,11 @@ TimeSeries(t::AbstractVector{<:Real}, v::AbstractVector{T}; issorted=false) wher
 TimeSeries(t::AbstractVector{<:DateTime}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
 TimeSeries{T}(t::AbstractVector, v::AbstractVector; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t,v), issorted=issorted)
 TimeSeries{T}() where T = TimeSeries{T}(TimeRecord{T}[], issorted=true)
+
+Base.convert(::Type{TimeSeries{T}}, v::TimeSeries) where T = TimeSeries{T}(records(v), issorted=true)
+Base.convert(::Type{TimeSeries{T}}, v::Vector{<:TimeRecord}) where T = TimeSeries{T}(v)
+Base.convert(::Type{V}, v::TimeSeries) where V<:Vector{<:TimeRecord} = convert(V, records(v))
+
 
 # =======================================================================================
 # Timeseries views
@@ -264,7 +268,7 @@ end
 
 
 #Recipe for plotting timeseries
-@recipe function f(ts::TimeSeries; use_dates=true)
+@recipe function f(ts::AbstractTimeSeries; use_dates=true)
     if !use_dates
         return (timestamps(ts), values(ts))
     else

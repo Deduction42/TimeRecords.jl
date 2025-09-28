@@ -289,6 +289,13 @@ end
     @test max(ts, 3:5) == [4,5]
     @test min(ts, 3:5) == [3,4]
 
+    #Test mathematical operations and broadcasting
+    @test sin.(ts) == TimeSeries(timestamps(ts), sin.(values(ts)))
+    @test ts + ts == ts*2
+    @test ts - ts == ts*0
+    @test ts .* ts == ts.^2
+    @test ts ./ ts == ts.^0
+
 
 end    
 
