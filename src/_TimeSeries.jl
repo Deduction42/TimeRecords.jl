@@ -50,20 +50,26 @@ end
 
 #Set index checks for timestamp equality, but other wise deletes element [i] and uses that as the insertion hint
 function Base.setindex!(ts::AbstractTimeSeries{T}, r::TimeRecord, ind::Integer) where T
-    if timestamp(r) == timestamp(ts[ind])
+    #Get adjacent timestamp, use NaN if out of range
+    ub = ifelse((ind+1) <= lastindex(ts), timestamp(ts[min(ind+1, end)]), NaN)
+    lb = ifelse((ind-1) >= firstindex(ts), timestamp(ts[max(ind-1, begin)]), NaN)
+    t  = timestamp(r)
+
+    #Check that the timestamp is inside the boundaries (with NaNs being a pass)
+    if !(t<lb) & !(ub<t) 
         setindex!(records(ts), r, ind)
     else
-        deleteat!(ts, ind)
-        push!(ts, r, indhint=ind)
+        error("Cannot insert record $(r) because it is out-of-order $((lb, t, ub)). If order is not guaranteed, use 'deleteat!(ts, ind); push!(ts, r)'")
     end
     return ts
 end
 
-#Set multiple indices and then sort the timeseries
-function Base.setindex!(ts::AbstractTimeSeries{T}, vr::AbstractVector{<:TimeRecord}, ind::AbstractVector{<:Integer}) where T
-    setindex!(records(ts), vr, ind)
-    sort!(ts)
-    return ts
+function Base.setindex!(ts::AbstractTimeSeries{T}, X::AbstractTimeSeries, inds::AbstractVector{<:Integer}) where T
+    Base.setindex_shape_check(X, length(inds))
+    for (count, ind) in enumerate(inds)
+        setindex!(ts, X[begin + (count-1)], ind)
+    end
+    return ts 
 end
 
 function Base.fill!(ts::AbstractTimeSeries, x)

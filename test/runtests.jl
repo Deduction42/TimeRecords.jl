@@ -141,11 +141,7 @@ end
     ts[2] = TimeRecord(2,2)
     @test ts == TimeSeries{Float64}(1:5, 1:5)
 
-    ts[2] = TimeRecord(3.5,2)
-    @test ts == TimeSeries{Float64}([1,3,3.5,4,5], [1,3,2,4,5])
-
-    ts[3] = TimeRecord(2,2)
-    @test ts == TimeSeries{Float64}(1:5,1:5)
+    @test_throws "Cannot insert record" ts[2] = TimeRecord(3.5,2)
 
     ts[1:3] = TimeSeries(2:4, 1:3)
     @test ts == TimeSeries{Float64}([2:4;4:5],1:5)
