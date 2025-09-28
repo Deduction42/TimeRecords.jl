@@ -4,18 +4,19 @@ v2.02 Add tests for math functions and broadcasting, bump version
         - this is a more flexible insertion that can avoid performance footguns
         - error on "non-chronological insertions", and suggest "deleteat!(ts, ind); push!(ts, x)"
         - "ischronological" checking should automatically pass where adjacent timestamps are NaN
-    - undefined initializers are too complex to initialize with NaN just use Vector{TimeRecord}
+    - undefined initializers are too complex to initialize with NaN just stick with the default Vector{TimeRecord}
         - Vector{TimeRecord} is the lowest common denominator with fewest assumptions
+        - Broadcasting to a destination should still just "work" (very useful for future RegularTimeSeries)
 
 v2.03 Have options for dealing with datetime precision issues
+    - Create "float2datetime" and "datetime2float" that can handle arbitrary references and missing values
+        float2datetime(x::Real) = isnan(x) ? missing : unix2datetime(x + ORIGIN_FLOAT[])
+        datetime2float(x::DateTime) = datetime2unix(x) - ORIGIN_FLOAT[]
+        datetime2float(x::Missing) = NaN
+        set_date_origin(x::DateTime) = setindex!(ORIGIN_FLOAT, datetime2unix(x))
     - Float64 in Unix will only have microsecond precision near our date if the origin is Epoch
         - Much finer precision can be obtained by moving the origin closer to now
         - Changing the reference point only changes how "dates" are displayed
-    - Have a global constant called ORIGIN_FLOAT = Ref(datetime2unix(origin_date))
-    - Create conversion functions: 
-        float2datetime(x) = unix2datetime(x + ORIGIN_FLOAT[])
-        datetime2float(x) = datetime2unix(x) - ORIGIN_FLOAT[]
-        date_origin(x::DateTime) = setindex!(ORIGIN_FLOAT, datetime2unix(x))
     - Add toggle option to display times as float instead of "DateTime"
         - This lives inside the "Base.show" function
 
@@ -26,6 +27,9 @@ v2.1.0 Add RegularTimeSeries with special "find" methods (that would be very fas
     - getindex returns the constructed TimeRecord
     - setindex! on a timerecord only works if the timestamp matches exactly
     - `timeseries(t, v)` will return RegularTimeSeries if t is an abstract range
+        - Can also use interpolation/averaging on other timeseries to construct new timeseries if "v" is a timeseries
+        - timeseries(t::AbstractRange, v::AbstractTimeSeries; order=0, method=interpolation)
+        - averaging will produce one less element, and the "timestamp" assigned to an average is the end (to prevent "future contamination")
     - Change the hierarchy:
         - AbstractTimeSeries
             - AbstractRegularTS
@@ -33,12 +37,8 @@ v2.1.0 Add RegularTimeSeries with special "find" methods (that would be very fas
             - AbstractIrregularTS 
                 - TimeSeries, TimeSeriesView
 
-
 v2.1.1 Add documentation
 
-v2.1.1 Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) 
-    - retrieves the closest value if the date is approximate, "nothing" otherwise
-    - add "setindex!(ts, v, t::Union{DateTime,Float64}) which returns an error if the nearest value isn't approximate"
 
 Plot Recipe notes (in case of improvements):
     - https://docs.juliaplots.org/latest/RecipesBase/syntax/
