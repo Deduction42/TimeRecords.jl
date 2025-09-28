@@ -5,8 +5,7 @@ v2.02 Add tests for math functions and broadcasting, bump version
         - error on "non-chronological insertions", and suggest "deleteat!(ts, ind); push!(ts, x)"
         - "ischronological" checking should automatically pass where adjacent timestamps are NaN
     - undefined initializers are too complex to initialize with NaN just use Vector{TimeRecord}
-
-
+        - Vector{TimeRecord} is the lowest common denominator with fewest assumptions
 
 v2.03 Have options for dealing with datetime precision issues
     - Float64 in Unix will only have microsecond precision near our date if the origin is Epoch
@@ -20,17 +19,24 @@ v2.03 Have options for dealing with datetime precision issues
     - Add toggle option to display times as float instead of "DateTime"
         - This lives inside the "Base.show" function
 
-v2.04 Add RegularTimeSeries with special "find" methods (that would be very fast)
-    - internals contains: (1)<timstamps> a Range and (2)<values> a Vector of raw values
+v2.1.0 Add RegularTimeSeries with special "find" methods (that would be very fast)
+    - Stores timestamps as a reange and values as a raw vector
+        - timestamps are of type StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64}
+        - values are just a plain vector with no timestamps
     - getindex returns the constructed TimeRecord
-    - setindex on a timerecord the value if the timestamp matches
+    - setindex! on a timerecord only works if the timestamp matches exactly
     - `timeseries(t, v)` will return RegularTimeSeries if t is an abstract range
-    - re-evaluate the use of AbstractTimeSeries in some functions (push! in particular)
-    - may need to do some custom broadcasting
+    - Change the hierarchy:
+        - AbstractTimeSeries
+            - AbstractRegularTS
+                - RegularTimeseries, RegularTimeseriesView
+            - AbstractIrregularTS 
+                - TimeSeries, TimeSeriesView
 
-v2.05 Add documentation
 
-v2.06 Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) 
+v2.1.1 Add documentation
+
+v2.1.1 Add getindex(ts::AbstractTimeSeries, t::Union{DateTime,Float64}) 
     - retrieves the closest value if the date is approximate, "nothing" otherwise
     - add "setindex!(ts, v, t::Union{DateTime,Float64}) which returns an error if the nearest value isn't approximate"
 
