@@ -22,6 +22,7 @@ struct TimeRecord{T} <: AbstractTimeRecord{T}
 end
 
 TimeRecord{T}(t::DateTime, v) where T = TimeRecord{T}(datetime2unix(t), v)
+TimeRecord{T}(r::TimeRecord) where T = TimeRecord{T}(timestamp(r), value(r))
 TimeRecord(t::Union{Real,DateTime}, v::T) where T = TimeRecord{T}(t, v)
 
 Base.promote_rule(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{promote_rule(R1,R2)}

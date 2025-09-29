@@ -20,6 +20,11 @@ v2.03 Have options for dealing with datetime precision issues
     - Add toggle option to display times as float instead of "DateTime"
         - This lives inside the "Base.show" function
 
+v2.04 Add filtering functions
+    - First-order lowpass filter 
+    - First-order detrender (forgetful sum of diff)
+    - double-filter for no phase lag
+
 v2.1.0 Add RegularTimeSeries with special "find" methods (that would be very fast)
     - Stores timestamps as a reange and values as a raw vector
         - timestamps are of type StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64}

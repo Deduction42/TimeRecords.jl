@@ -184,12 +184,13 @@ Constructs a time series from time records, will sort input in-place unless isso
 """
 struct TimeSeries{T} <: AbstractTimeSeries{T}
     records :: Vector{TimeRecord{T}}
-    function TimeSeries{T}(records::AbstractVector{TimeRecord{T}}; issorted=false) where T
-        if issorted
-            return new{T}(records)
-        else
-            return new{T}(sort!(records))
+    function TimeSeries{T}(records::AbstractVector{<:TimeRecord}; issorted=false) where T
+        newseries = new{T}(records)
+        if !issorted
+            filter!(x->!isnan(timestamp(x)), newseries.records)
+            sort!(newseries.records)
         end
+        return newseries
     end
 end
 
