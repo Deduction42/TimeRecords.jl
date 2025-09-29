@@ -1,14 +1,5 @@
 ToDo:
-v2.02 Add tests for math functions and broadcasting, bump version
-    - setindex! shouldn't check for equality, just chronology 
-        - this is a more flexible insertion that can avoid performance footguns
-        - error on "non-chronological insertions", and suggest "deleteat!(ts, ind); push!(ts, x)"
-        - "ischronological" checking should automatically pass where adjacent timestamps are NaN
-    - undefined initializers are too complex to initialize with NaN just stick with the default Vector{TimeRecord}
-        - Vector{TimeRecord} is the lowest common denominator with fewest assumptions
-        - Broadcasting to a destination should still just "work" (very useful for future RegularTimeSeries)
-
-v2.03 Have options for dealing with datetime precision issues
+v2.02 Have options for dealing with datetime precision issues
     - Create "float2datetime" and "datetime2float" that can handle arbitrary references and missing values
         float2datetime(x::Real) = isnan(x) ? missing : unix2datetime(x + ORIGIN_FLOAT[])
         datetime2float(x::DateTime) = datetime2unix(x) - ORIGIN_FLOAT[]
@@ -20,7 +11,7 @@ v2.03 Have options for dealing with datetime precision issues
     - Add toggle option to display times as float instead of "DateTime"
         - This lives inside the "Base.show" function
 
-v2.04 Add filtering functions
+v2.03 Add filtering functions
     - First-order lowpass filter 
     - First-order detrender (forgetful sum of diff)
     - double-filter for no phase lag

@@ -426,6 +426,7 @@ end
 end
 
 @testset "Miscillaneous" begin
+    #Conversions
     @test TimeRecord{Float64}(TimeRecord(1,1)) === TimeRecord{Float64}(1.0, 1.0)
     @test all(convert(TimeSeries{Float64}, TimeSeries(1:5, 1:5)) .=== TimeSeries{Float64}(1:5, 1:5))
     @test all(convert(TimeSeries{Float64}, TimeRecord.(1:5, 1:5)) .=== TimeSeries{Float64}(1:5, 1:5))
@@ -433,9 +434,15 @@ end
     @test TimeRecords.common_timestamp(TimeRecord.(1.0, zeros(4))...) === 1.0
     @test TimeRecords.common_timestamp(TimeRecord(0.0, 1.0)) === 0.0
 
+    #Time interval leftovers
     Δt = TimeInterval(DateTime(1995-01-01)=>DateTime(1996-01-01))
     @test Δt[begin] == Δt[1]
     @test Δt[end] == Δt[2]
+
+    #Brodcasting
+    ts0 = TimeSeries(1:5, randn(5))
+    ts0 .= log.(TimeRecord.(1:5, 1:5)).*2.0
+    @test ts0 == TimeSeries(1:5, 2*log.(1:5))
 end
 
 @testset "Aqua.jl" begin
