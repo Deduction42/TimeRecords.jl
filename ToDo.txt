@@ -1,5 +1,5 @@
 ToDo:
-v2.02 Have options for dealing with datetime precision issues
+v2.0.3 Have options for dealing with datetime precision issues
     - Simplify TimeInterval to make it a FieldArray{2} with fields "t0, tN"
     - Create "stamp2datetime" and "datetime2stamp" that can handle arbitrary references and missing values
         stamp2unix(x::Real) = x + ORIGIN_FLOAT[]
@@ -14,7 +14,7 @@ v2.02 Have options for dealing with datetime precision issues
     - Add toggle option to display times as float instead of "DateTime"
         - This lives inside the "Base.show" function
 
-v2.03 Add filtering functions
+v2.0.4 Add filtering functions
     - First-order lowpass filter 
     - First-order detrender (forgetful sum of diff)
     - double-filter for no phase lag
