@@ -106,7 +106,7 @@ end
     @test ts[[2,1,3]] == ts[1:3]
     @test ts[:] == TimeSeries{Float64}(1:5,1:5)
     @test ts[BitVector([1,1,1,0,0])] == TimeSeries{Float64}(1:3,1:3)
-    @test ts[TimeInterval(2:4)] == TimeSeries{Float64}(2:4,2:4)
+    @test ts[TimeInterval(2,4)] == TimeSeries{Float64}(2:4,2:4)
     @test ts[TimeInterval(1.5,4.5)] == TimeSeries{Float64}(2:4,2:4)
     @test keepat!(deepcopy(ts), 2:3) == ts[2:3]
     @test deleteat!(deepcopy(ts), 4:5) == ts[1:3]
