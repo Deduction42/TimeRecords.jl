@@ -180,7 +180,7 @@ using Dates
 
             t0 = DateTime(2024,1,1,0,0,0)
             t1 = DateTime(2024,1,1,0,1,0)
-            vt = datetime2unix.(t0:Second(1):t1)
+            vt = datetime2timestamp.(t0:Second(1):t1)
             
 
             pert = rand(length(vt)).*0

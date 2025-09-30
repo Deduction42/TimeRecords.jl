@@ -12,25 +12,30 @@ By default, records(ts::AbstractTimeSeries) = ts.records
 abstract type AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}} end
 
 records(ts::AbstractTimeSeries)     = ts.records
-timestamps(ts::AbstractTimeSeries)  = timestamp.(records(ts))
-datetimes(ts::AbstractTimeSeries)   = datetime.(records(ts))  
-Base.values(ts::AbstractTimeSeries) = value.(records(ts))
-Base.Vector(ts::AbstractTimeSeries) = Vector(records(ts))
+timestamps(ts::AbstractTimeSeries)  = map(timestamp, ts)
+datetimes(ts::AbstractTimeSeries)   = map(datetime, ts)
+unixtimes(ts::AbstractTimeSeries)   = map(unixtime, ts)
+Base.values(ts::AbstractTimeSeries) = map(value, ts)
+Base.Vector(ts::AbstractTimeSeries) = collect(ts)
 
 valuetype(::Type{<:AbstractTimeSeries{T}}) where T = T
 valuetype(ts::AbstractTimeSeries{T}) where T = T
 
 #Indexing where sorting isn't an issue
-Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(records(ts), ind)
-Base.getindex(ts::T, ind::Colon) where T <: AbstractTimeSeries = T(getindex(records(ts), ind), issorted=true)
-Base.getindex(ts::T, ind::AbstractVector{Bool}) where T <: AbstractTimeSeries = T(getindex(records(ts), ind), issorted=true)
-Base.getindex(ts::T, ind::UnitRange) where T <: AbstractTimeSeries = T(getindex(records(ts), ind), issorted=true)
-Base.getindex(ts::T, Δt::TimeInterval) where T <: AbstractTimeSeries = T(getindex(records(ts), findinner(ts, Δt)), issorted=true)
+import Base.Fix1
 
-#All other indexing where sorting may be an issue
-function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries 
-    return T(getindex(records(ts), ind), issorted=issorted(ind))
-end
+#Mandatory methods for all timeseries
+Base.length(ts::AbstractTimeSeries)      = length(ts.records)
+Base.firstindex(ts::AbstractTimeSeries)  = firstindex(ts.records)
+Base.lastindex(ts::AbstractTimeSeries)   = lastindex(ts.records)
+Base.getindex(ts::AbstractTimeSeries, ind::Integer) = getindex(ts.records, ind)
+
+#Optional methods that can be inferred from basic methods
+Base.size(ts::AbstractTimeSeries) = (length(ts),)
+Base.getindex(ts::AbstractTimeSeries, ind::Colon) = TimeSeries(map(Fix1(getindex, ts), firstindex(ts):lastindex(ts)), issorted=true)
+Base.getindex(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeries(map(Fix1(getindex, ts), (firstindex(ts):lastindex(ts))[ind]), issorted=true)
+Base.getindex(ts::AbstractTimeSeries, Δt::TimeInterval) = ts[findinner(ts, Δt)]
+Base.getindex(ts::AbstractTimeSeries, ind::AbstractVector) = TimeSeries(map(Fix1(getindex, ts), ind), issorted=issorted(ind))
 
 #Set index basesd on value only (maintains the same timestamp to guarantee sorting)
 function Base.setindex!(ts::AbstractTimeSeries{T}, x::Any, ind::Integer) where T 
@@ -89,11 +94,6 @@ function Base.keepat!(ts::AbstractTimeSeries, inds)
     return ts
 end
 
-Base.length(ts::AbstractTimeSeries)      = length(records(ts))
-Base.size(ts::AbstractTimeSeries)        = (length(records(ts)),)
-Base.firstindex(ts::AbstractTimeSeries)  = firstindex(records(ts))
-Base.lastindex(ts::AbstractTimeSeries)   = lastindex(records(ts))
-Base.sort!(ts::AbstractTimeSeries)       = sort!(records(ts))
 
 """
 push!(ts::TimeSeries, tr::TimeRecord)
@@ -146,7 +146,7 @@ function keeplatest!(ts::AbstractTimeSeries, t::Real)
         return ts
     end
 end
-keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2unix(t))
+keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2timestamp(t))
 
 
 """
@@ -206,7 +206,7 @@ TimeSeries{T}() where T = TimeSeries{T}(TimeRecord{T}[], issorted=true)
 Base.convert(::Type{TimeSeries{T}}, v::TimeSeries) where T = TimeSeries{T}(records(v), issorted=true)
 Base.convert(::Type{TimeSeries{T}}, v::Vector{<:TimeRecord}) where T = TimeSeries{T}(v)
 Base.convert(::Type{V}, v::TimeSeries) where V<:Vector{<:TimeRecord} = convert(V, records(v))
-
+Base.sort!(ts::TimeSeries) = sort!(ts.records)
 
 # =======================================================================================
 # Timeseries views

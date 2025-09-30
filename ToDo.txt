@@ -1,6 +1,5 @@
 ToDo:
 v2.0.3 Have options for dealing with datetime precision issues
-    - Simplify TimeInterval to make it a FieldArray{2} with fields "t0, tN"
     - Create "stamp2datetime" and "datetime2stamp" that can handle arbitrary references and missing values
         stamp2unix(x::Real) = x + ORIGIN_FLOAT[]
         unix2stamp(x::Real) = x - ORIGIN_FLOAT[] 
