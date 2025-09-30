@@ -35,7 +35,10 @@ Base.show(io::IO, tr::TimeRecord{T}) where T<:AbstractString = print(io, "TimeRe
 Base.show(io::IO, mime::MIME"text/plain", tr::TimeRecord) = show(io, tr)
 
 """
+    merge(f::Union{Type,Function}, tr::TimeRecord, vtr::TimeRecord...)
+
 Merge multiple time record with the same timestamp and apply the function "f" to the results
+Useful for constructing a TimeRecord with multiple TimeRecord arguments
 """
 function Base.merge(f::Union{Type,Function}, tr::TimeRecord, vtr::TimeRecord...)
     mtr = merge(tr, vtr...)
@@ -43,39 +46,40 @@ function Base.merge(f::Union{Type,Function}, tr::TimeRecord, vtr::TimeRecord...)
 end 
 
 """
+    merge(tr::TimeRecord, trs::TimeRecord...)
+
 Merge multiple time records with the same timestamp as a tuple
 """
-function Base.merge(tr::TimeRecord, vtr::TimeRecord...)
-    str = (tr, vtr...)
-    if !allequal(timestamp.(str))
+function Base.merge(tr::TimeRecord, trs::TimeRecord...)
+    alltr = (tr, trs...)
+    if !allequal(map(timestamp, alltr))
         throw(ArgumentError("Cannot merge time records for different timestamps"))
     end
-    return TimeRecord(str[begin].t, value.(str))
+    return TimeRecord(alltr[begin].t, map(value, alltr))
 end
 
 
 """
 Define a time interval (where the lowest value is always first), useful for integrals
 """
-struct TimeInterval <: AbstractVector{Float64}
-    t :: SVector{2, Float64}
-    TimeInterval(x) = new(SVector{2,Float64}(_unixtime.(extrema(x))...))
+struct TimeInterval <: FieldVector{2, Float64}
+    t0 :: Float64 
+    tN :: Float64
+    TimeInterval(t0::T, tN::T) where T<:Union{Real,DateTime,TimeRecord} = new(_as_timestamp.(extrema((t0,tN)))...)
 end
+TimeInterval(tp::Pair) = TimeInterval(tp...)
+Base.Pair(dt::TimeInterval) = dt.t0 => dt.tN
 
 Base.show(io::IO, Δt::TimeInterval) = print(io, "$(unix2datetime(Δt[begin])) => $(unix2datetime(Δt[end]))")
 Base.show(io::IO, mime::MIME"text/plain", Δt::TimeInterval) = Base.show(io::IO, Δt)
 
-_unixtime(t::Real) = Float64(t)
-_unixtime(t::DateTime) = datetime2unix(t)
-_unixtime(t::TimeRecord) = timestamp(t)
+_as_timestamp(t::Real) = Float64(t)
+_as_timestamp(t::DateTime) = datetime2unix(t)
+_as_timestamp(t::TimeRecord) = timestamp(t)
 
-TimeInterval(t1,t2) = TimeInterval(t1=>t2)
+Base.:+(Δt::TimeInterval, t::Real) = Δt .+ t
+Base.:+(t::Real, Δt::TimeInterval) = Δt .+ t
+Base.:-(Δt::TimeInterval, t::Real) = Δt .- t 
+Base.:-(t::Real, Δt::TimeInterval) = t .- Δt 
 
-Base.getindex(Δt::TimeInterval, ind::Colon)  = Δt.t
-Base.getindex(Δt::TimeInterval, ind)  = getindex(Δt.t, ind)
-Base.size(Δt::TimeInterval)           = (2,)
-Base.firstindex(Δt::TimeInterval)     = 1
-Base.lastindex(Δt::TimeInterval)      = 2
-Base.diff(Δt::TimeInterval) = Δt.t[2] - Δt.t[1]
-
-Base.:+(dt::TimeInterval, x::Real) = TimeInterval(dt.t .+ x)
+Base.diff(Δt::TimeInterval) = Δt.tN - Δt.t0

@@ -174,7 +174,7 @@ TimeInterval(ts::AbstractTimeSeries)
 
 Creates a time interval based on the beginning and end of the timeseries
 """
-TimeInterval(ts::AbstractTimeSeries) = TimeInterval(timestamp.((ts[begin],ts[end])))
+TimeInterval(ts::AbstractTimeSeries) = TimeInterval(timestamp.((ts[begin],ts[end]))...)
 
 # =======================================================================================
 # Basic Timeseries (only assumes sorted)
