@@ -5,6 +5,7 @@ module TimeRecords
 
     include("_TimeRecord.jl")
     include("_TimeSeries.jl")
+    include("math.jl")
     include("find.jl")
     include("interpolations.jl")
     include("aggregations.jl")

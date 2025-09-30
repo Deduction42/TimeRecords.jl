@@ -33,38 +33,43 @@ function Base.getindex(ts::T, ind) where T <: AbstractTimeSeries
 end
 
 #Set index basesd on value only (maintains the same timestamp to guarantee sorting)
-function Base.setindex!(ts::AbstractTimeSeries{T}, x, ind::Integer) where T 
-    setindex!(records(ts), TimeRecord(timestamp(ts[ind]), T(x)), ind)
+function Base.setindex!(ts::AbstractTimeSeries{T}, x::Any, ind::Integer) where T 
+    setindex!(records(ts), TimeRecord(timestamp(ts[ind]), convert(T,x)), ind)
     return ts 
 end
 
 #Sets multiple indices based on value only
-function Base.setindex!(ts::AbstractTimeSeries{T}, X::AbstractArray, inds::AbstractVector) where T
+function Base.setindex!(ts::AbstractTimeSeries{T}, X::Any, inds::AbstractVector{<:Integer}) where T
     Base.setindex_shape_check(X, length(inds))
-    ix0 = firstindex(X)
     for (count, ind) in enumerate(inds)
-        x = T(X[ix0+count-1])
+        x = convert(T, X[begin + (count-1)])
         setindex!(records(ts), TimeRecord(timestamp(ts[ind]), x), ind)
     end
     return ts 
 end
 
-#Set index checks for timestamp equality, but other wise deletes element [i] and uses that as the inertion hint
+#Set index checks for timestamp equality, but other wise deletes element [i] and uses that as the insertion hint
 function Base.setindex!(ts::AbstractTimeSeries{T}, r::TimeRecord, ind::Integer) where T
-    if timestamp(r) == timestamp(ts[ind])
+    #Get adjacent timestamp, use NaN if out of range
+    ub = ifelse((ind+1) <= lastindex(ts), timestamp(ts[min(ind+1, end)]), NaN)
+    lb = ifelse((ind-1) >= firstindex(ts), timestamp(ts[max(ind-1, begin)]), NaN)
+    t  = timestamp(r)
+
+    #Check that the timestamp is inside the boundaries (with NaNs being a pass)
+    if !(t<lb) & !(ub<t) 
         setindex!(records(ts), r, ind)
     else
-        deleteat!(ts, ind)
-        push!(ts, r, indhint=ind)
+        error("Cannot insert record $(r) because it is out-of-order $((lb, t, ub)). If order is not guaranteed, use 'deleteat!(ts, ind); push!(ts, r)'")
     end
     return ts
 end
 
-#Set multiple indices and then sort the timeseries
-function Base.setindex!(ts::AbstractTimeSeries{T}, vr::AbstractVector{<:TimeRecord}, ind::AbstractVector) where T
-    setindex!(records(ts), vr, ind)
-    sort!(ts)
-    return ts
+function Base.setindex!(ts::AbstractTimeSeries{T}, X::AbstractTimeSeries, inds::AbstractVector{<:Integer}) where T
+    Base.setindex_shape_check(X, length(inds))
+    for (count, ind) in enumerate(inds)
+        setindex!(ts, X[begin + (count-1)], ind)
+    end
+    return ts 
 end
 
 function Base.fill!(ts::AbstractTimeSeries, x)
@@ -172,19 +177,20 @@ Creates a time interval based on the beginning and end of the timeseries
 TimeInterval(ts::AbstractTimeSeries) = TimeInterval(timestamp.((ts[begin],ts[end])))
 
 # =======================================================================================
-# Regular timeseries
+# Basic Timeseries (only assumes sorted)
 # =======================================================================================
 """
 Constructs a time series from time records, will sort input in-place unless issorted=false
 """
 struct TimeSeries{T} <: AbstractTimeSeries{T}
     records :: Vector{TimeRecord{T}}
-    function TimeSeries{T}(records::AbstractVector{TimeRecord{T}}; issorted=false) where T
-        if issorted
-            return new{T}(records)
-        else
-            return new{T}(sort!(records))
+    function TimeSeries{T}(records::AbstractVector{<:TimeRecord}; issorted=false) where T
+        newseries = new{T}(records)
+        if !issorted
+            filter!(x->!isnan(timestamp(x)), newseries.records)
+            sort!(newseries.records)
         end
+        return newseries
     end
 end
 
@@ -196,6 +202,11 @@ TimeSeries(t::AbstractVector{<:Real}, v::AbstractVector{T}; issorted=false) wher
 TimeSeries(t::AbstractVector{<:DateTime}, v::AbstractVector{T}; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t, v), issorted=issorted)
 TimeSeries{T}(t::AbstractVector, v::AbstractVector; issorted=false) where T = TimeSeries{T}(TimeRecord{T}.(t,v), issorted=issorted)
 TimeSeries{T}() where T = TimeSeries{T}(TimeRecord{T}[], issorted=true)
+
+Base.convert(::Type{TimeSeries{T}}, v::TimeSeries) where T = TimeSeries{T}(records(v), issorted=true)
+Base.convert(::Type{TimeSeries{T}}, v::Vector{<:TimeRecord}) where T = TimeSeries{T}(v)
+Base.convert(::Type{V}, v::TimeSeries) where V<:Vector{<:TimeRecord} = convert(V, records(v))
+
 
 # =======================================================================================
 # Timeseries views
@@ -264,7 +275,7 @@ end
 
 
 #Recipe for plotting timeseries
-@recipe function f(ts::TimeSeries; use_dates=true)
+@recipe function f(ts::AbstractTimeSeries; use_dates=true)
     if !use_dates
         return (timestamps(ts), values(ts))
     else

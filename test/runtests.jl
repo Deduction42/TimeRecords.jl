@@ -141,11 +141,7 @@ end
     ts[2] = TimeRecord(2,2)
     @test ts == TimeSeries{Float64}(1:5, 1:5)
 
-    ts[2] = TimeRecord(3.5,2)
-    @test ts == TimeSeries{Float64}([1,3,3.5,4,5], [1,3,2,4,5])
-
-    ts[3] = TimeRecord(2,2)
-    @test ts == TimeSeries{Float64}(1:5,1:5)
+    @test_throws "Cannot insert record" ts[2] = TimeRecord(3.5,2)
 
     ts[1:3] = TimeSeries(2:4, 1:3)
     @test ts == TimeSeries{Float64}([2:4;4:5],1:5)
@@ -289,6 +285,13 @@ end
     @test max(ts, 3:5) == [4,5]
     @test min(ts, 3:5) == [3,4]
 
+    #Test mathematical operations and broadcasting
+    @test sin.(ts) == TimeSeries(timestamps(ts), sin.(values(ts)))
+    @test ts + ts == ts*2
+    @test ts - ts == ts*0
+    @test ts .* ts == ts.^2
+    @test ts ./ ts == ts.^0
+
 
 end    
 
@@ -420,6 +423,26 @@ end
     @test isnothing(apply!(simple_callback, collector, t0))
     @test fetch(apply!(simple_callback, deepcopy(collector), t0 + Second(5))) ≈ 3.4081344e9
 
+end
+
+@testset "Miscillaneous" begin
+    #Conversions
+    @test TimeRecord{Float64}(TimeRecord(1,1)) === TimeRecord{Float64}(1.0, 1.0)
+    @test all(convert(TimeSeries{Float64}, TimeSeries(1:5, 1:5)) .=== TimeSeries{Float64}(1:5, 1:5))
+    @test all(convert(TimeSeries{Float64}, TimeRecord.(1:5, 1:5)) .=== TimeSeries{Float64}(1:5, 1:5))
+    @test all(convert(Vector{TimeRecord{Int64}}, TimeSeries(1:5, 1.0:5.0)) .=== TimeRecord.(1:5, 1:5))
+    @test TimeRecords.common_timestamp(TimeRecord.(1.0, zeros(4))...) === 1.0
+    @test TimeRecords.common_timestamp(TimeRecord(0.0, 1.0)) === 0.0
+
+    #Time interval leftovers
+    Δt = TimeInterval(DateTime(1995-01-01)=>DateTime(1996-01-01))
+    @test Δt[begin] == Δt[1]
+    @test Δt[end] == Δt[2]
+
+    #Brodcasting
+    ts0 = TimeSeries(1:5, randn(5))
+    ts0 .= log.(TimeRecord.(1:5, 1:5)).*2.0
+    @test ts0 == TimeSeries(1:5, 2*log.(1:5))
 end
 
 @testset "Aqua.jl" begin
