@@ -11,13 +11,43 @@ By default, records(ts::AbstractTimeSeries) = ts.records
 """
 abstract type AbstractTimeSeries{T} <: AbstractVector{TimeRecord{T}} end
 
-records(ts::AbstractTimeSeries)     = ts.records
-timestamps(ts::AbstractTimeSeries)  = map(timestamp, ts)
-datetimes(ts::AbstractTimeSeries)   = map(datetime, ts)
-unixtimes(ts::AbstractTimeSeries)   = map(unixtime, ts)
-Base.values(ts::AbstractTimeSeries) = map(value, ts)
-Base.Vector(ts::AbstractTimeSeries) = collect(ts)
+"""
+records(ts::AbstractTimeSeries)
 
+Generate a vector of time records from the TimeSeries 
+"""
+records(ts::AbstractTimeSeries)     = ts.records
+
+"""
+timestamps(ts::AbstractTimeSeries)
+
+Generate a vector of floating point timestamps (in seconds) from a timeseries
+(due to arbitrary offsets, this may not be Unix, use `unixstamps` for this instead)
+"""
+timestamps(ts::AbstractTimeSeries)  = map(timestamp, ts)
+
+"""
+datetimes(ts::AbstractTimeSeries)
+
+Generate a vector of datetimes from a timeseries
+"""
+datetimes(ts::AbstractTimeSeries)   = map(datetime, ts)
+
+"""
+unixtimes(ts::AbstractTimeSeries)
+
+Generate a vector of datetimes from a timeseries
+"""
+unixtimes(ts::AbstractTimeSeries)   = map(unixtime, ts)
+
+"""
+values(ts::AbstractTimeSeries)
+
+Generate a vector of values from a timeseries 
+"""
+Base.values(ts::AbstractTimeSeries) = map(value, ts)
+
+Base.Vector(ts::AbstractTimeSeries) = collect(ts)
 valuetype(::Type{<:AbstractTimeSeries{T}}) where T = T
 valuetype(ts::AbstractTimeSeries{T}) where T = T
 
@@ -35,7 +65,7 @@ Base.size(ts::AbstractTimeSeries) = (length(ts),)
 Base.getindex(ts::AbstractTimeSeries, ind::Colon) = TimeSeries(map(Fix1(getindex, ts), firstindex(ts):lastindex(ts)), issorted=true)
 Base.getindex(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeries(map(Fix1(getindex, ts), (firstindex(ts):lastindex(ts))[ind]), issorted=true)
 Base.getindex(ts::AbstractTimeSeries, Δt::TimeInterval) = ts[findinner(ts, Δt)]
-Base.getindex(ts::AbstractTimeSeries, ind::AbstractVector) = TimeSeries(map(Fix1(getindex, ts), ind), issorted=issorted(ind))
+Base.getindex(ts::AbstractTimeSeries, ind::AbstractVector{<:Integer}) = TimeSeries(map(Fix1(getindex, ts), ind), issorted=issorted(ind))
 
 #Set index basesd on value only (maintains the same timestamp to guarantee sorting)
 function Base.setindex!(ts::AbstractTimeSeries{T}, x::Any, ind::Integer) where T 
@@ -180,7 +210,12 @@ TimeInterval(ts::AbstractTimeSeries) = TimeInterval(timestamp.((ts[begin],ts[end
 # Basic Timeseries (only assumes sorted)
 # =======================================================================================
 """
-Constructs a time series from time records, will sort input in-place unless issorted=false
+struct TimeSeries{T} <: AbstractTimeSeries{T}
+    records :: Vector{TimeRecord{T}}
+end
+
+Constructs a time series from time records (sorted by timstamp with NaNs removed) 
+WARNING: will sort input and remove NaNs in-place unless issorted=false
 """
 struct TimeSeries{T} <: AbstractTimeSeries{T}
     records :: Vector{TimeRecord{T}}
@@ -212,6 +247,8 @@ Base.sort!(ts::TimeSeries) = sort!(ts.records)
 # Timeseries views
 # =======================================================================================
 """
+TimeSeriesView{T, P, I, LinIndex}  <: AbstractTimeSeries{T}
+
 View of a timeseries
 """
 struct TimeSeriesView{T, P, I, LinIndex} <: AbstractTimeSeries{T}
@@ -228,7 +265,7 @@ Base.view(ts::AbstractTimeSeries, ind::AbstractVector{Bool}) = TimeSeriesView(vi
 # Merging functionality through extrapolation
 # =======================================================================================
 """
-    Base.merge(f::Union{Function,Type}, vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
+Base.merge(f::Union{Function,Type}, vt::AbstractVector{<:Real}, vts::AbstractTimeSeries...; order=0)
 
 Merges a set of timeseries to a common set of timestamps through interpolation and applies 'f' to the resulting row
 If 'f' is not provided, 'tuple' is used
