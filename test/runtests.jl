@@ -95,6 +95,7 @@ end
     
     #Test various operations
     @test timestamps(ts) == 1:5
+    @test unixtimes(ts) == 1:5
     @test datetimes(ts)  == unix2datetime.(1:5)
     @test values(ts) == 1:5
     @test eltype(ts) == TimeRecord{Float64}
@@ -166,10 +167,12 @@ end
     # Constructors
     ts0 = TimeSeries{Float64}(1:5, 1:5)
     @test RegularTimeSeries(ts0, 1:5, method=:interpolate, order=0) == ts
+    @test RegularTimeSeries(ts, 1:5, method=:interpolate, order=0) == ts
     @test RegularTimeSeries{Float64}(ts0, 1:5, method=:interpolate, order=0) == ts
     @test RegularTimeSeries(ts0, 1.5:4.5, method=:interpolate, order=1).values == 1.5:4.5
     @test RegularTimeSeries(ts0, 1:5, method=:average, order=0).values == average(ts0, 0:5, order=0)
     @test RegularTimeSeries(ts0, 1:5, method=:average, order=1).values == average(ts0, 0:5, order=1)
+    @test_throws ArgumentError RegularTimeSeries(ts0, 1:5, method=:integrate, order=0)
 
 
     #Test mapvalues
@@ -181,6 +184,7 @@ end
     
     #Test various operations
     @test timestamps(ts) == 1:5
+    @test unixtimes(ts) == 1:5
     @test datetimes(ts)  == unix2datetime.(1:5)
     @test values(ts) == 1:5
     @test eltype(ts) == TimeRecord{Float64}
@@ -198,6 +202,7 @@ end
     @test_throws ArgumentError deleteat!(deepcopy(ts), 4:5) == ts[1:3]
     @test_throws ArgumentError push!(deepcopy(ts), TimeRecord(0,0))
     @test dropnan(RegularTimeSeries{Float64}(1:2,[1,NaN])) == TimeSeries{Float64}([1],[1])
+    @test_throws ArgumentError dropnan!(RegularTimeSeries{Float64}(1:2,[1,NaN]))
     @test TimeInterval(ts) == TimeInterval(1,5)
     @test_throws ArgumentError view(ts, [1,2,3])
     @test_throws ArgumentError view(ts, 3:-1:1)
@@ -574,6 +579,23 @@ end
     ts0 = TimeSeries(1:5, randn(5))
     ts0 .= log.(TimeRecord.(1:5, 1:5)).*2.0
     @test ts0 == TimeSeries(1:5, 2*log.(1:5))
+
+    #Appropriate selection of timeseries
+    @test timeseries(1:2, 1:2) isa RegularTimeSeries 
+    @test timeseries(collect(1:2), 1:2) isa TimeSeries
+    @test timeseries(TimeRecord.(1:2, 1:2)) isa TimeSeries
+
+    #Other
+    @test unixtime(TimeRecord(1, 0)) == 1
+    
+    TimeRecords.show_datetimes(false)
+    @test string(TimeRecord(1,0)) == "TimeRecord{Int64}(t=1.0, v=0)"
+    TimeRecords.show_datetimes(true)
+    @test string(TimeRecord(1,0)) == "TimeRecord{Int64}(t=\"1970-01-01T00:00:01\", v=0)"
+
+    TimeRecords.set_origin_date(DateTime(2020))
+    @test string(TimeRecord(1,0)) == "TimeRecord{Int64}(t=\"2020-01-01T00:00:01\", v=0)"
+
 end
 
 @testset "Aqua.jl" begin

@@ -99,8 +99,14 @@ function RegularTimeSeries{T}(ts::AbstractTimeSeries, vt::AbstractRange; method=
     return RegularTimeSeries{T}(tsr.timestamps, tsr.values)
 end
 
+"""
+timeseries(t::AbstractVector, v::AbstractVector)
 
-
+Constructs a TimeSeries if 't' is a vector, and a RegularTimeSeries if 't' is an AbstractRange
+"""
+timeseries(t::AbstractRange, v) = RegularTimeSeries(t, v)
+timeseries(t::AbstractVector, v) = TimeSeries(t, v)
+timeseries(v::AbstractVector{<:TimeRecord}) = TimeSeries(v)
 
 # =======================================================================================
 # Timeseries views

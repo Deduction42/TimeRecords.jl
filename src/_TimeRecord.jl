@@ -1,6 +1,7 @@
 abstract type AbstractTimeRecord{T} end
 
 const ORIGIN_UNIX = Ref(0.0)
+const SHOW_DATETIME = Ref(true)
 
 """
     set_origin_date(t::DateTime)
@@ -12,7 +13,7 @@ should be shifted closer to the timestamps in question.
 """
 function set_origin_date(t::DateTime)
     ORIGIN_UNIX[] = datetime2unix(t)
-    return nothing 
+    return ORIGIN_UNIX[]
 end
 timestamp2unix(t::Real) = t + ORIGIN_UNIX[]
 unix2timestamp(t::Real) = t - ORIGIN_UNIX[]
@@ -20,6 +21,16 @@ datetime2timestamp(t::DateTime) = unix2timestamp(datetime2unix(t))
 timestamp2datetime(t::Real) = isnan(t) ? missing : unix2datetime(timestamp2unix(t))
 datetime2timestamp(t::Missing) = NaN64
 
+
+"""
+    show_datetimes(x::Bool)
+
+Toggles display of TimeRecord in datetime format or timestamp format
+"""
+function show_datetimes(x::Bool)
+    SHOW_DATETIME[] = x 
+    return SHOW_DATETIME[]
+end
 
 #Basic abstract functionality
 valuetype(x::AbstractTimeRecord{T}) where T = T
@@ -55,8 +66,14 @@ Base.convert(::Type{TimeRecord{T}}, x::TimeRecord) where T = TimeRecord{T}(times
 Base.promote_typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.promote_typejoin(R1,R2)}
 Base.typejoin(T1::Type{TimeRecord{R1}}, T2::Type{TimeRecord{R2}}) where {R1,R2} = TimeRecord{Base.typejoin(R1,R2)}
 
-Base.show(io::IO, tr::TimeRecord{T}) where T = print(io, "TimeRecord{$(T)}(t=\"$(datetime(tr))\", v=$(value(tr)))")
-Base.show(io::IO, tr::TimeRecord{T}) where T<:AbstractString = print(io, "TimeRecord{$(T)}(t=\"$(datetime(tr))\", v=\"$(value(tr))\")")
+function _time_record_str(tr::TimeRecord{T}) where T
+    t_show = SHOW_DATETIME[] ? "\""*string(datetime(tr))*"\"" : string(timestamp(tr))
+    v_show = T <: AbstractString ? "\""*value(tr)*"\"" : string(value(tr))
+    return "TimeRecord{$(T)}(t=$(t_show), v=$(v_show))"
+end
+
+Base.show(io::IO, tr::TimeRecord{T}) where T = print(io, _time_record_str(tr))
+Base.show(io::IO, tr::TimeRecord{T}) where T<:AbstractString = print(io, _time_record_str(tr))
 Base.show(io::IO, mime::MIME"text/plain", tr::TimeRecord) = show(io, tr)
 
 """
@@ -90,7 +107,7 @@ Define a time interval (where the lowest value is always first), useful for inte
 struct TimeInterval <: FieldVector{2, Float64}
     t0 :: Float64 
     tN :: Float64
-    TimeInterval(t0::T, tN::T) where T = new(_as_timestamp.(extrema((t0,tN)))...)
+    TimeInterval(t0, tN) = new(_as_timestamp.(extrema((t0,tN)))...)
 end
 TimeInterval(tp::Pair) = TimeInterval(tp...)
 Base.Pair(dt::TimeInterval) = dt.t0 => dt.tN
