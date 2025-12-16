@@ -154,11 +154,13 @@ findbounds(ts::AbstractTimeSeries, t::Real, indhint::Nothing) = findbounds(ts, t
 #Special optimal case for RegularTimeSeries
 function findbounds(ts::RegularTimeSeries, t::Real)
     i0 = firstindex(ts)
-    Δi = lastindex(ts) - i0
+    iN = lastindex(ts)
+
     relpos = (t - ts.timestamps[begin])/(ts.timestamps[end]-ts.timestamps[begin]) #Relative position on a scale of 0 => 1
-    indpos = i0 + Δi*relpos #Continuous position on a scale of 1 => N
-    lb = max(floor(Int64, indpos), firstindex(ts.timestamps)-1)
-    ub = min(ceil(Int64, indpos), lastindex(ts.timestamps)+1)
+    indpos = i0 + (iN-i0)*relpos #Continuous position on a scale of 1 => N
+
+    lb = clamp(floor(Int64, indpos), i0-1, iN)
+    ub = clamp(ceil(Int64, indpos), i0, iN+1)
 
     return lb => ub 
 end

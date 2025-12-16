@@ -279,6 +279,60 @@ end
 
 end
 
+@testset "RegularTimeSeries find" begin
+    ts = RegularTimeSeries{Float64}(1:5, 1:5)
+
+    #Test findinner, findouter
+    dt_before = TimeInterval(-5, -2)
+    dt_begin  = TimeInterval(-2, 2)
+    dt_middle = TimeInterval(2, 4)
+    dt_end    = TimeInterval(4, 6)
+    dt_after  = TimeInterval(7, 9)
+    dt_between = TimeInterval(2.1, 2.2)
+
+    @test findinner(ts, dt_before) == 1:0
+    @test findinner(ts, dt_before+0.1) == 1:0
+    @test findouter(ts, dt_before) == 1:1
+    @test findouter(ts, dt_before+0.1) == 1:1
+
+    @test findinner(ts, dt_begin)  == 1:2
+    @test findinner(ts, dt_begin+0.1)  == 1:2
+    @test findouter(ts, dt_begin)  == 1:2
+    @test findouter(ts, dt_begin+0.1) == 1:3
+
+    @test findinner(ts, dt_middle)  == 2:4
+    @test findinner(ts, dt_middle+0.1)  == 3:4
+    @test findouter(ts, dt_middle)  == 2:4
+    @test findouter(ts, dt_middle+0.1) == 2:5
+
+    @test findinner(ts, dt_end)  == 4:5
+    @test findinner(ts, dt_end+0.1)  == 5:5
+    @test findouter(ts, dt_end)  == 4:5
+    @test findouter(ts, dt_end+0.1) == 4:5
+    
+    @test findinner(ts, dt_after)  == 6:5
+    @test findinner(ts, dt_after+0.1)  == 6:5
+    @test findouter(ts, dt_after)  == 5:5
+    @test findouter(ts, dt_after+0.1) == 5:5
+
+    @test findinner(ts, dt_between) == 3:2
+    @test findouter(ts, dt_between) == 2:3
+
+    @test getinner(ts, dt_middle) == ts[2:4]
+    @test viewinner(ts, dt_middle) == ts[2:4]
+    @test getouter(ts, dt_middle+0.1) == ts[2:5]
+    @test viewouter(ts, dt_middle+0.1) == ts[2:5]
+
+    @test findinner(ts, dt_between, Ref(1)) == 3:2
+    @test findouter(ts, dt_between, Ref(1)) == 2:3
+
+    @test TimeRecords.initialhint!(nothing, ts, 1.5)[] == 1
+    @test TimeRecords.initialhint!(2, ts, 1.5)[] == 1
+
+
+end
+
+
 @testset "Interpolation/Aggregation" begin
     # Test time series
     ts = TimeSeries{Float64}(1:5, 1:5)
