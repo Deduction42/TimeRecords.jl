@@ -36,46 +36,47 @@ end
 ```
 A wrapper that attaches a unix timestap to a value. Timestamps are stored internally as Float64 (enabling faster and easier numeric computations like intergrals) but are displayed as DateTime.
 ```
-tr = TimeRecord(0, 1.1)
->> TimeRecord{Float64}(t=1970-01-01T00:00:00, v=1.1)
+julia> tr = TimeRecord(0, 1.1)
+TimeRecord{Float64}(t=1970-01-01T00:00:00, v=1.1)
 
-tr = TimeRecord(DateTime(2014, 09, 15), "Here's a random date")
->> TimeRecord{String}(t=2014-09-15T00:00:00, v="Here's a random date")
+julia> tr = TimeRecord(DateTime(2014, 09, 15), "Here's a random date")
+TimeRecord{String}(t=2014-09-15T00:00:00, v="Here's a random date")
 ```
 You can retrieve timestamps using `timestamp(tr)` or `datetime(tr)`
 ```
-timestamp(tr)
->> 1.4107392e9
-datetime(tr)
->> 2014-09-15T00:00:00
+julia> timestamp(tr)
+1.4107392e9
+
+julia> datetime(tr)
+2014-09-15T00:00:00
 ```
 values are retrieved using `value(tr)`
 ```
-value(tr)
->> "Here's a random date"
+julia> value(tr)
+"Here's a random date"
 ```
 
 ## TimeInterval
 An object which stores two timestamps as a sorted vector. This is useful for integrals or queries on timestamps. Constructors can use either Real or DateTime as inputs.
 ```
-dt = TimeInterval(0, 5); dt = TimeInterval(0=>5)
->> 1970-01-01T00:00:00 => 1970-01-01T00:00:05
+julia> dt = TimeInterval(0, 5); dt = TimeInterval(0=>5)
+1970-01-01T00:00:00 => 1970-01-01T00:00:05
 ```
 
 ## TimeSeries
 A vector of time records in chronological order, which among other things, supports indexing using time intervals.
 
 ```
-ts = TimeSeries([1,2,3,4,5],[1,2,3,4,5])
->> 5-element TimeSeries{Int64}:
+julia> ts = TimeSeries([1,2,3,4,5],[1,2,3,4,5])
+5-element TimeSeries{Int64}:
     TimeRecord{Int64}(t=1970-01-01T00:00:01, v=1)
     TimeRecord{Int64}(t=1970-01-01T00:00:02, v=2)
     TimeRecord{Int64}(t=1970-01-01T00:00:03, v=3)
     TimeRecord{Int64}(t=1970-01-01T00:00:04, v=4)
     TimeRecord{Int64}(t=1970-01-01T00:00:05, v=5)
 
-ts[TimeInterval(0=>3.1)]
->> 3-element TimeSeries{Int64}:
+julia> ts[TimeInterval(0=>3.1)]
+3-element TimeSeries{Int64}:
     TimeRecord{Int64}(t=1970-01-01T00:00:01, v=1)
     TimeRecord{Int64}(t=1970-01-01T00:00:02, v=2)
     TimeRecord{Int64}(t=1970-01-01T00:00:03, v=3)
@@ -95,6 +96,46 @@ plot(ts)
 dt = TimeInterval(DateTime("1970-01-01T00:00:01") => DateTime("1970-01-01T00:00:03"))
 plot(ts[dt])
 ```
+
+## RegularTimeSeries
+A StepRangeLen of timestamps paired with a vector of values. This different internal storage makes calling `timestamps(ts::RegularTimeSeries)` and `values(ts::RegularTimeSeries)` more efficient than it is for `TimeSeries`. Indexing by time range is also much much more efficient as indices can be calculated due to uniform timestamp assumptions. Due to timestamps being a range, operations that mutate timestamps are not allowed (such as `push`). However, operations that only mutate values are still valid (such as `setindex!` for values only, or time records with the same timestamp).
+
+```
+julia> ts = RegularTimeSeries(1:5,[1,2,3,4,5])
+5-element RegularTimeSeries{Int64}:
+ TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
+ TimeRecord{Int64}(t="1970-01-01T00:00:02", v=2)
+ TimeRecord{Int64}(t="1970-01-01T00:00:03", v=3)
+ TimeRecord{Int64}(t="1970-01-01T00:00:04", v=4)
+ TimeRecord{Int64}(t="1970-01-01T00:00:05", v=5)
+ end
+
+
+julia> ts[TimeInterval(0=>3.1)]
+3-element RegularTimeSeries{Int64}:
+ TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
+ TimeRecord{Int64}(t="1970-01-01T00:00:02", v=2)
+ TimeRecord{Int64}(t="1970-01-01T00:00:03", v=3)
+```
+
+A convenience method `timeseries` can be used to construct the optimal timeseries type given the arguments
+```
+julia> timeseries(1:2, 1:2)
+2-element RegularTimeSeries{Int64}:
+ TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
+ TimeRecord{Int64}(t="1970-01-01T00:00:02", v=2)
+
+julia> timeseries([1,2], 1:2)
+2-element TimeSeries{Int64}:
+ TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
+ TimeRecord{Int64}(t="1970-01-01T00:00:02", v=2)
+
+julia> timeseries(TimeRecord.(1:2, 1:2))
+2-element TimeSeries{Int64}:
+ TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
+ TimeRecord{Int64}(t="1970-01-01T00:00:02", v=2)
+```
+
 ## Interpolation
 The first major functionality supported is interpolation. Supported interpolation methods are zero-order-hold (order=0) or linear (order=1). 
 
@@ -121,6 +162,26 @@ indhint=initialhint!(Ref(1), ts, t)
 integrate(ts, t, indhint=indhint, order=1)
 ```
 and re-use indhint for every subsequent evaluation. This allows the integration step to save its final search result in `indhint` giving a strong recommendation for the next step on where to start, greatly reducing the need for searching.
+
+## Converting TimeSeries to RegularTimeSeries
+One common use for interpolation/averaging is converting irregular timeseries to regularized form. RegularTimeSeries contains a convenience constructor for this purpose, using many of the same keyword arguments from the interpolation and averaging functions. When averaging, do note that the average is taken on the time interval *before* the timestamp so as not to potentially pollute the time record with *future information*.
+
+```
+julia> ts = TimeSeries(1:5, 1.0:5.0);
+julia> RegularTimeSeries(ts, 1.5:4.5, method=:interpolate, order=1)
+4-element RegularTimeSeries{Float64}:
+ TimeRecord{Float64}(t="1970-01-01T00:00:01.500", v=1.5)
+ TimeRecord{Float64}(t="1970-01-01T00:00:02.500", v=2.5)
+ TimeRecord{Float64}(t="1970-01-01T00:00:03.500", v=3.5)
+ TimeRecord{Float64}(t="1970-01-01T00:00:04.500", v=4.5)
+
+julia> RegularTimeSeries(ts, 1.5:4.5, method=:average, order=0)
+4-element RegularTimeSeries{Float64}:
+ TimeRecord{Float64}(t="1970-01-01T00:00:01.500", v=1.0)
+ TimeRecord{Float64}(t="1970-01-01T00:00:02.500", v=1.5)
+ TimeRecord{Float64}(t="1970-01-01T00:00:03.500", v=2.5)
+ TimeRecord{Float64}(t="1970-01-01T00:00:04.500", v=3.5)
+```
 
 ## TimeSeriesCollector
 A datatype that is used to collect tagged time record pairs `Pair{String, TimeRecord{T}}` and organize them as timeseries according to their labels.

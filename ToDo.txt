@@ -1,23 +1,4 @@
 ToDo:
-v2.0.3 Have options for dealing with datetime precision issues
-    - Simplify TimeInterval to make it a FieldArray{2} with fields "t0, tN"
-    - Create "stamp2datetime" and "datetime2stamp" that can handle arbitrary references and missing values
-        stamp2unix(x::Real) = x + ORIGIN_FLOAT[]
-        unix2stamp(x::Real) = x - ORIGIN_FLOAT[] 
-        stamp2datetime(x::Real) = isnan(x) ? missing : unix2datetime(stamp2unix(x))
-        datetime2stamp(x::DateTime) = unix2stamp(datetime2unix(x))
-        datetime2stamp(x::Missing) = NaN
-        set_date_origin(x::DateTime) = setindex!(ORIGIN_FLOAT, datetime2unix(x))
-    - Float64 in Unix will only have microsecond precision near our date if the origin is Epoch
-        - Much finer precision can be obtained by moving the origin closer to now
-        - Changing the reference point only changes how "dates" are displayed
-    - Add toggle option to display times as float instead of "DateTime"
-        - This lives inside the "Base.show" function
-
-v2.0.4 Add filtering functions
-    - First-order lowpass filter 
-    - First-order detrender (forgetful sum of diff)
-    - double-filter for no phase lag
 
 v2.1.0 Add RegularTimeSeries with special "find" methods (that would be very fast)
     - Stores timestamps as a reange and values as a raw vector
@@ -33,10 +14,14 @@ v2.1.0 Add RegularTimeSeries with special "find" methods (that would be very fas
         - AbstractTimeSeries
             - AbstractRegularTS
                 - RegularTimeseries, RegularTimeseriesView
-            - AbstractIrregularTS 
-                - TimeSeries, TimeSeriesView
 
-v2.1.1 Add documentation
+v2.1.1 Add filtering functions
+    - First-order lowpass filter 
+    - First-order detrender (forgetful sum of diff)
+    - double-filter for no phase lag
+
+
+v2.1.2 Add documentation
 
 
 Plot Recipe notes (in case of improvements):

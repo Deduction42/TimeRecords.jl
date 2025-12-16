@@ -16,13 +16,13 @@ julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
 @testset "TimeRecord basics" begin
     @test TimeRecords.valuetype(TimeRecord(0,2.0+im)) == ComplexF64
     @test TimeRecords.valuetype(TimeRecord{Int64}) == Int64
-    @test TimeRecords.update_time(TimeRecord(0,1), 1) == TimeRecord(1,1)
+    @test TimeRecords.settime(TimeRecord(0,1), 1) == TimeRecord(1,1)
     @test promote(TimeRecord(0,1), TimeRecord(0,1.0)) === (TimeRecord(0,1.0), TimeRecord(0,1.0))  
     @test [TimeRecord(0,1), TimeRecord(0,missing)] isa Vector{TimeRecord{Union{Missing, Int64}}}
     @test Base.promote_typejoin(TimeRecord{Float64}, TimeRecord{Nothing}) == TimeRecord{Base.promote_typejoin(Float64, Nothing)}
     @test typejoin(TimeRecord{Float64}, TimeRecord{Nothing}) == TimeRecord{typejoin(Float64, Nothing)}
-    @test string(TimeRecord(0,1)) == "TimeRecord{Int64}(t=1970-01-01T00:00:00, v=1)"
-    @test string(TimeRecord(0,"this")) == "TimeRecord{String}(t=1970-01-01T00:00:00, v=\"this\")"
+    @test string(TimeRecord(0,1)) == "TimeRecord{Int64}(t=\"1970-01-01T00:00:00\", v=1)"
+    @test string(TimeRecord(0,"this")) == "TimeRecord{String}(t=\"1970-01-01T00:00:00\", v=\"this\")"
     @test merge(TimeRecord(0,1), TimeRecord(0,2)) == TimeRecord(0, (1,2))
     @test merge(SVector, TimeRecord(0,1), TimeRecord(0,2)) == TimeRecord(0, SVector(1,2))
     @test_throws ArgumentError merge(TimeRecord(0,1), TimeRecord(1,1))
@@ -95,6 +95,7 @@ end
     
     #Test various operations
     @test timestamps(ts) == 1:5
+    @test unixtimes(ts) == 1:5
     @test datetimes(ts)  == unix2datetime.(1:5)
     @test values(ts) == 1:5
     @test eltype(ts) == TimeRecord{Float64}
@@ -116,6 +117,7 @@ end
     @test dropnan(TimeSeries{Float64}([1,2],[1,NaN])) == TimeSeries{Float64}([1],[1])
     @test TimeInterval(ts) == TimeInterval(1,5)
     @test_throws ArgumentError view(ts, [1,2,3])
+    @test_throws ArgumentError view(ts, 3:-1:1)
 
     ts_view = TimeRecords.TimeSeriesView(view(ts.records, 1:3))
     @test view(ts, 1:3) == ts_view
@@ -156,6 +158,86 @@ end
     jan_hours = 0:3600:(24*3600*31)
     @test plot(TimeSeries(jan_hours, jan_hours)) isa Plots.Plot
 end
+
+@testset "RegularTimeSeries basics" begin
+    # Test time series
+    ts = RegularTimeSeries{Float64}(1:5, 1:5)
+    t  = [1.5, 2.5, 3.5]
+
+    # Constructors
+    ts0 = TimeSeries{Float64}(1:5, 1:5)
+    @test RegularTimeSeries(ts0, 1:5, method=:interpolate, order=0) == ts
+    @test RegularTimeSeries(ts, 1:5, method=:interpolate, order=0) == ts
+    @test RegularTimeSeries{Float64}(ts0, 1:5, method=:interpolate, order=0) == ts
+    @test RegularTimeSeries(ts0, 1.5:4.5, method=:interpolate, order=1).values == 1.5:4.5
+    @test RegularTimeSeries(ts0, 1:5, method=:average, order=0).values == average(ts0, 0:5, order=0)
+    @test RegularTimeSeries(ts0, 1:5, method=:average, order=1).values == average(ts0, 0:5, order=1)
+    @test_throws ArgumentError RegularTimeSeries(ts0, 1:5, method=:integrate, order=0)
+
+
+    #Test mapvalues
+    @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
+    @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
+    
+    #Test keeplatest
+    @test_throws ArgumentError keeplatest!(RegularTimeSeries(1:5,1:5), 4)
+    
+    #Test various operations
+    @test timestamps(ts) == 1:5
+    @test unixtimes(ts) == 1:5
+    @test datetimes(ts)  == unix2datetime.(1:5)
+    @test values(ts) == 1:5
+    @test eltype(ts) == TimeRecord{Float64}
+    @test eltype(RegularTimeSeries{ComplexF64}) == TimeRecord{ComplexF64}
+    @test valuetype(ts) == Float64
+    @test valuetype(RegularTimeSeries{ComplexF64}) == ComplexF64
+    @test Vector(ts) == ts[:]
+    @test ts[1:3] == RegularTimeSeries{Float64}(1:3,1:3)
+    @test ts[[2,1,3]] == ts[1:3]
+    @test ts[:] == TimeSeries{Float64}(1:5,1:5)
+    @test ts[BitVector([1,1,1,0,0])] == TimeSeries{Float64}(1:3,1:3)
+    @test ts[TimeInterval(2,4)] == TimeSeries{Float64}(2:4,2:4)
+    @test ts[TimeInterval(1.5,4.5)] == RegularTimeSeries{Float64}(2:4,2:4)
+    @test_throws ArgumentError keepat!(deepcopy(ts), 2:3) == ts[2:3]
+    @test_throws ArgumentError deleteat!(deepcopy(ts), 4:5) == ts[1:3]
+    @test_throws ArgumentError push!(deepcopy(ts), TimeRecord(0,0))
+    @test dropnan(RegularTimeSeries{Float64}(1:2,[1,NaN])) == TimeSeries{Float64}([1],[1])
+    @test_throws ArgumentError dropnan!(RegularTimeSeries{Float64}(1:2,[1,NaN]))
+    @test TimeInterval(ts) == TimeInterval(1,5)
+    @test_throws ArgumentError view(ts, [1,2,3])
+    @test_throws ArgumentError view(ts, 3:-1:1)
+
+    ts_view = TimeRecords.TimeSeriesView(view(ts[:].records, 1:3))
+    @test view(ts, 1:3) == ts_view
+    @test view(ts, TimeInterval(1,3)) == ts_view
+    @test_throws ArgumentError view(ts, BitVector([1,1,1,0,0])) == ts_view
+
+    ts1 = setindex!(deepcopy(ts), TimeRecord(1, NaN), 1)
+    @test ts1 == RegularTimeSeries(1:5, [NaN;2:5])
+
+    #Various constructors and indexing
+    ts[1:3] .= 0
+    @test ts == RegularTimeSeries{Float64}(1:5, [0,0,0,4,5])
+    
+    ts[1:3] = 1:3
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
+
+    ts[1:3] = TimeSeries(1:3,1:3)
+    @test ts == RegularTimeSeries{Float64}(1:5, 1:5)
+
+    @test_throws ArgumentError ts[2] = TimeRecord(2.5,2)
+
+    ts[2] = TimeRecord(2,2)
+    @test ts == RegularTimeSeries{Float64}(1:5, 1:5)
+
+    @test_throws ArgumentError ts[2] = TimeRecord(3.5,2)
+
+    vt = DateTime(2020,1,1,1):Hour(1):DateTime(2020,1,1,5)
+    @test RegularTimeSeries(vt, 1:5) == TimeSeries(datetime2timestamp.(vt), 1:5)
+    @test_throws ArgumentError RegularTimeSeries(vt, 1:4)
+
+end
+
 
 @testset "TimeSeries find" begin
     ts = TimeSeries{Float64}(1:5, 1:5)
@@ -215,6 +297,60 @@ end
 
 
 end
+
+@testset "RegularTimeSeries find" begin
+    ts = RegularTimeSeries{Float64}(1:5, 1:5)
+
+    #Test findinner, findouter
+    dt_before = TimeInterval(-5, -2)
+    dt_begin  = TimeInterval(-2, 2)
+    dt_middle = TimeInterval(2, 4)
+    dt_end    = TimeInterval(4, 6)
+    dt_after  = TimeInterval(7, 9)
+    dt_between = TimeInterval(2.1, 2.2)
+
+    @test findinner(ts, dt_before) == 1:0
+    @test findinner(ts, dt_before+0.1) == 1:0
+    @test findouter(ts, dt_before) == 1:1
+    @test findouter(ts, dt_before+0.1) == 1:1
+
+    @test findinner(ts, dt_begin)  == 1:2
+    @test findinner(ts, dt_begin+0.1)  == 1:2
+    @test findouter(ts, dt_begin)  == 1:2
+    @test findouter(ts, dt_begin+0.1) == 1:3
+
+    @test findinner(ts, dt_middle)  == 2:4
+    @test findinner(ts, dt_middle+0.1)  == 3:4
+    @test findouter(ts, dt_middle)  == 2:4
+    @test findouter(ts, dt_middle+0.1) == 2:5
+
+    @test findinner(ts, dt_end)  == 4:5
+    @test findinner(ts, dt_end+0.1)  == 5:5
+    @test findouter(ts, dt_end)  == 4:5
+    @test findouter(ts, dt_end+0.1) == 4:5
+    
+    @test findinner(ts, dt_after)  == 6:5
+    @test findinner(ts, dt_after+0.1)  == 6:5
+    @test findouter(ts, dt_after)  == 5:5
+    @test findouter(ts, dt_after+0.1) == 5:5
+
+    @test findinner(ts, dt_between) == 3:2
+    @test findouter(ts, dt_between) == 2:3
+
+    @test getinner(ts, dt_middle) == ts[2:4]
+    @test viewinner(ts, dt_middle) == ts[2:4]
+    @test getouter(ts, dt_middle+0.1) == ts[2:5]
+    @test viewouter(ts, dt_middle+0.1) == ts[2:5]
+
+    @test findinner(ts, dt_between, Ref(1)) == 3:2
+    @test findouter(ts, dt_between, Ref(1)) == 2:3
+
+    @test TimeRecords.initialhint!(nothing, ts, 1.5)[] == 1
+    @test TimeRecords.initialhint!(2, ts, 1.5)[] == 1
+
+
+end
+
 
 @testset "Interpolation/Aggregation" begin
     # Test time series
@@ -321,7 +457,7 @@ end
 
             t0 = DateTime(2024,1,1,0,0,0)
             t1 = DateTime(2024,1,1,0,1,0)
-            vt = datetime2unix.(t0:Second(1):t1)
+            vt = datetime2timestamp.(t0:Second(1):t1)
             
 
             pert = rand(length(vt)).*0
@@ -392,7 +528,7 @@ end
     =========================================================================#
     t0 = DateTime(2024,1,1,0,0,0)
     t1 = DateTime(2024,1,1,0,1,0)
-    vt = datetime2unix.(t0:Second(1):t1)
+    vt = datetime2timestamp.(t0:Second(1):t1)
     original = Dict(
         "tag1" => TimeSeries(vt, vt),
         "tag2" => TimeSeries(vt, vt)
@@ -443,6 +579,23 @@ end
     ts0 = TimeSeries(1:5, randn(5))
     ts0 .= log.(TimeRecord.(1:5, 1:5)).*2.0
     @test ts0 == TimeSeries(1:5, 2*log.(1:5))
+
+    #Appropriate selection of timeseries
+    @test timeseries(1:2, 1:2) isa RegularTimeSeries 
+    @test timeseries(collect(1:2), 1:2) isa TimeSeries
+    @test timeseries(TimeRecord.(1:2, 1:2)) isa TimeSeries
+
+    #Other
+    @test unixtime(TimeRecord(1, 0)) == 1
+    
+    TimeRecords.show_datetimes(false)
+    @test string(TimeRecord(1,0)) == "TimeRecord{Int64}(t=1.0, v=0)"
+    TimeRecords.show_datetimes(true)
+    @test string(TimeRecord(1,0)) == "TimeRecord{Int64}(t=\"1970-01-01T00:00:01\", v=0)"
+
+    TimeRecords.set_origin_date(DateTime(2020))
+    @test string(TimeRecord(1,0)) == "TimeRecord{Int64}(t=\"2020-01-01T00:00:01\", v=0)"
+
 end
 
 @testset "Aqua.jl" begin
