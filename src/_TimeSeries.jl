@@ -66,9 +66,17 @@ to stricter assumptions.
 struct RegularTimeSeries{T} <: AbstractRegularTimeSeries{T}
     timestamps :: StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64}
     values :: Vector{T}
-    RegularTimeSeries{T}(vt::AbstractRange, v::AbstractVector) where T = new{T}(vt, v)
-    RegularTimeSeries(vt::AbstractRange, v::AbstractVector{T}) where T = new{T}(vt, v)
+    RegularTimeSeries{T}(vt::AbstractRange, v::AbstractVector) where T = length(vt)==length(v) ? new{T}(vt, v) : throw(ArgumentError("Arguments must be of the same length"))
+    RegularTimeSeries(vt::AbstractRange, v::AbstractVector{T}) where T = length(vt)==length(v) ? new{T}(vt, v) : throw(ArgumentError("Arguments must be of the same length"))
 end
+
+function RegularTimeSeries{T}(t::StepRange{DateTime}, v::AbstractVector) where T 
+    t0 = datetime2timestamp(first(t))
+    tN = datetime2timestamp(last(t))
+    Δt = Nanosecond(step(t)).value/1e9
+    return RegularTimeSeries{T}(t0:Δt:tN, v)
+end
+RegularTimeSeries(t::StepRange{DateTime}, v::AbstractVector{T}) where T = RegularTimeSeries{T}(t, v)
 
 """
 RegularTimeSeries(ts::AbstractTimeSeries{T}, vt::AbstractRange; method=:interpolate, order=0)
@@ -90,6 +98,8 @@ function RegularTimeSeries{T}(ts::AbstractTimeSeries, vt::AbstractRange; method=
     tsr = RegularTimeSeries(ts, vt, method=method, order=order)
     return RegularTimeSeries{T}(tsr.timestamps, tsr.values)
 end
+
+
 
 
 # =======================================================================================

@@ -226,6 +226,11 @@ end
     @test ts == RegularTimeSeries{Float64}(1:5, 1:5)
 
     @test_throws ArgumentError ts[2] = TimeRecord(3.5,2)
+
+    vt = DateTime(2020,1,1,1):Hour(1):DateTime(2020,1,1,5)
+    @test RegularTimeSeries(vt, 1:5) == TimeSeries(datetime2timestamp.(vt), 1:5)
+    @test_throws ArgumentError RegularTimeSeries(vt, 1:4)
+
 end
 
 
