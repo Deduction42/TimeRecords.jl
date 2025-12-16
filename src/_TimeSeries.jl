@@ -86,6 +86,11 @@ function RegularTimeSeries(ts::AbstractTimeSeries{T}, vt::AbstractRange; method=
     throw(ArgumentError("Keyword 'method' only supports symbols with value ':interpolate' or ':average'"))
 end
 
+function RegularTimeSeries{T}(ts::AbstractTimeSeries, vt::AbstractRange; method=:interpolate, order=0) where T
+    tsr = RegularTimeSeries(ts, vt, method=method, order=order)
+    return RegularTimeSeries{T}(tsr.timestamps, tsr.values)
+end
+
 
 # =======================================================================================
 # Timeseries views

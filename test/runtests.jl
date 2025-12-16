@@ -163,6 +163,15 @@ end
     ts = RegularTimeSeries{Float64}(1:5, 1:5)
     t  = [1.5, 2.5, 3.5]
 
+    # Constructors
+    ts0 = TimeSeries{Float64}(1:5, 1:5)
+    @test RegularTimeSeries(ts0, 1:5, method=:interpolate, order=0) == ts
+    @test RegularTimeSeries{Float64}(ts0, 1:5, method=:interpolate, order=0) == ts
+    @test RegularTimeSeries(ts0, 1.5:4.5, method=:interpolate, order=1).values == 1.5:4.5
+    @test RegularTimeSeries(ts0, 1:5, method=:average, order=0).values == average(ts0, 0:5, order=0)
+    @test RegularTimeSeries(ts0, 1:5, method=:average, order=1).values == average(ts0, 0:5, order=1)
+
+
     #Test mapvalues
     @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
     @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
