@@ -116,6 +116,7 @@ end
     @test dropnan(TimeSeries{Float64}([1,2],[1,NaN])) == TimeSeries{Float64}([1],[1])
     @test TimeInterval(ts) == TimeInterval(1,5)
     @test_throws ArgumentError view(ts, [1,2,3])
+    @test_throws ArgumentError view(ts, 3:-1:1)
 
     ts_view = TimeRecords.TimeSeriesView(view(ts.records, 1:3))
     @test view(ts, 1:3) == ts_view
@@ -156,6 +157,68 @@ end
     jan_hours = 0:3600:(24*3600*31)
     @test plot(TimeSeries(jan_hours, jan_hours)) isa Plots.Plot
 end
+
+@testset "RegularTimeSeries basics" begin
+    # Test time series
+    ts = RegularTimeSeries{Float64}(1:5, 1:5)
+    t  = [1.5, 2.5, 3.5]
+
+    #Test mapvalues
+    @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
+    @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
+    
+    #Test keeplatest
+    @test_throws ArgumentError keeplatest!(RegularTimeSeries(1:5,1:5), 4)
+    
+    #Test various operations
+    @test timestamps(ts) == 1:5
+    @test datetimes(ts)  == unix2datetime.(1:5)
+    @test values(ts) == 1:5
+    @test eltype(ts) == TimeRecord{Float64}
+    @test eltype(RegularTimeSeries{ComplexF64}) == TimeRecord{ComplexF64}
+    @test valuetype(ts) == Float64
+    @test valuetype(RegularTimeSeries{ComplexF64}) == ComplexF64
+    @test Vector(ts) == ts[:]
+    @test ts[1:3] == RegularTimeSeries{Float64}(1:3,1:3)
+    @test ts[[2,1,3]] == ts[1:3]
+    @test ts[:] == TimeSeries{Float64}(1:5,1:5)
+    @test ts[BitVector([1,1,1,0,0])] == TimeSeries{Float64}(1:3,1:3)
+    @test ts[TimeInterval(2,4)] == TimeSeries{Float64}(2:4,2:4)
+    @test ts[TimeInterval(1.5,4.5)] == RegularTimeSeries{Float64}(2:4,2:4)
+    @test_throws ArgumentError keepat!(deepcopy(ts), 2:3) == ts[2:3]
+    @test_throws ArgumentError deleteat!(deepcopy(ts), 4:5) == ts[1:3]
+    @test_throws ArgumentError push!(deepcopy(ts), TimeRecord(0,0))
+    @test dropnan(RegularTimeSeries{Float64}(1:2,[1,NaN])) == TimeSeries{Float64}([1],[1])
+    @test TimeInterval(ts) == TimeInterval(1,5)
+    @test_throws ArgumentError view(ts, [1,2,3])
+    @test_throws ArgumentError view(ts, 3:-1:1)
+
+    ts_view = TimeRecords.TimeSeriesView(view(ts[:].records, 1:3))
+    @test view(ts, 1:3) == ts_view
+    @test view(ts, TimeInterval(1,3)) == ts_view
+    @test_throws ArgumentError view(ts, BitVector([1,1,1,0,0])) == ts_view
+
+    ts1 = setindex!(deepcopy(ts), TimeRecord(1, NaN), 1)
+    @test ts1 == RegularTimeSeries(1:5, [NaN;2:5])
+
+    #Various constructors and indexing
+    ts[1:3] .= 0
+    @test ts == RegularTimeSeries{Float64}(1:5, [0,0,0,4,5])
+    
+    ts[1:3] = 1:3
+    @test ts == TimeSeries{Float64}(1:5, 1:5)
+
+    ts[1:3] = TimeSeries(1:3,1:3)
+    @test ts == RegularTimeSeries{Float64}(1:5, 1:5)
+
+    @test_throws ArgumentError ts[2] = TimeRecord(2.5,2)
+
+    ts[2] = TimeRecord(2,2)
+    @test ts == RegularTimeSeries{Float64}(1:5, 1:5)
+
+    @test_throws ArgumentError ts[2] = TimeRecord(3.5,2)
+end
+
 
 @testset "TimeSeries find" begin
     ts = TimeSeries{Float64}(1:5, 1:5)

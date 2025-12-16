@@ -130,7 +130,7 @@ function findbounds(ts::AbstractTimeSeries, t::Real)
     T = typeof(lb)
 
     if t < timestamp(ts[lb])
-        return (lb-1)=>lb
+        return (lb-1) => lb
     elseif timestamp(ts[ub]) < t
         return ub => (ub+1)
     end
@@ -148,6 +148,23 @@ function findbounds(ts::AbstractTimeSeries, t::Real)
 end
 
 findbounds(ts::AbstractTimeSeries, t::Real, indhint::Nothing) = findbounds(ts, t)
+
+
+
+#Special optimal case for RegularTimeSeries
+function findbounds(ts::RegularTimeSeries, t::Real)
+    i0 = firstindex(ts)
+    Δi = lastindex(ts) - i0
+    relpos = (t - ts.timestamps[begin])/(ts.timestamps[end]-ts.timestamps[begin]) #Relative position on a scale of 0 => 1
+    indpos = i0 + Δi*relpos #Continuous position on a scale of 1 => N
+    lb = max(floor(Int64, indpos), firstindex(ts.timestamps)-1)
+    ub = min(ceil(Int64, indpos), lastindex(ts.timestamps)+1)
+
+    return lb => ub 
+end
+findbounds(ts::RegularTimeSeries, t::Real, indhint::Integer) = findbounds(ts, t, nothing)
+findbounds(ts::RegularTimeSeries, t::Real, indhint::Base.RefValue{<:Integer}) = findbounds(ts, t, nothing)
+
 
 """
 initialhint(ts::AbstractTimeSeries, t::Real)
