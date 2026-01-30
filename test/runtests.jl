@@ -33,6 +33,16 @@ julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
     @test TimeInterval(0,1)[:] == SVector(0,1)
     @test size(TimeInterval(0,1)) == (2,)
 
+    x = 1
+    y = 2
+    for op in (+, -, *, /, ^, div, mod)
+        @test op(x, TimeRecord(0, y)) == TimeRecord(0, op(x, y))
+    end
+
+    for func in (inv, sin, exp)
+        @test func(TimeRecord(0, x)) == TimeRecord(0, func(x))
+    end
+
 end
 
 

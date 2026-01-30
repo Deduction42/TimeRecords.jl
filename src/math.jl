@@ -35,8 +35,8 @@ apply2values(f, arg::TimeRecord) = TimeRecord(timestamp(arg), f(value(arg)))
 #Two-argument operations
 for op in OPERATORS
     @eval Base.$op(x1::TimeRecord, x2::TimeRecord)  = apply2values($op, x1, x2)
-    @eval Base.$op(x1::TimeRecord, x2::Arithmetics) = TimeRecord(timestamp(x1), $op(value(x1),x2))
-    @eval Base.$op(x1::Arithmetics, x2::TimeRecord) = TimeRecord(timestamp(x2), $op(value(x2),x1))
+    @eval Base.$op(x1::TimeRecord, x2::Arithmetics) = TimeRecord(timestamp(x1), $op(value(x1), x2))
+    @eval Base.$op(x1::Arithmetics, x2::TimeRecord) = TimeRecord(timestamp(x2), $op(x1, value(x2)))
 end
 
 #Single-argument operations
