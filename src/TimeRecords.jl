@@ -9,6 +9,7 @@ module TimeRecords
     include("find.jl")
     include("interpolations.jl")
     include("aggregations.jl")
+    include("episodes.jl")
     include("_TimeSeriesCollector.jl")
 
     export AbstractTimeRecord, AbstractTimeSeries, TimeRecord, TimeInterval, TimeSeries, RegularTimeSeries, TimeSeriesCollector, timeseries
@@ -17,5 +18,6 @@ module TimeRecords
     export dropnan!, dropnan, mapvalues, mapvalues!, getinner, getouter, viewinner, viewouter, findinner, findouter, findbounds
     export initialhint, initialhint!, clampedbounds, keeplatest!, apply!
     export datetime2timestamp, timestamp2datetime
+    export EpisodeBuilder, EpisodeState, build_episodes, add_episodes!
         
 end
