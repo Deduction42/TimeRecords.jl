@@ -1,6 +1,6 @@
 name = "TimeRecords"
 uuid = "b543fe20-4c68-4b5f-af79-4641a0d39826"
-version = "2.1.1"
+version = "2.2.0"
 authors = ["Ruben Gonzalez <ruben.carbonbased@gmail.com> and contributors"]
 
 [deps]
