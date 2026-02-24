@@ -1,6 +1,7 @@
 using TimeRecords
 using Test
 using StaticArrays
+using FlexUnits, .UnitRegistry
 using Dates
 using TestItems: @testitem
 using TestItemRunner
@@ -440,6 +441,35 @@ end
 
 
 end    
+
+@testset "Units and Episodes" begin 
+    builder = EpisodeBuilder(
+        starter = TimeRecords.sum_above_starter,
+        reducer = TimeRecords.sum_above_reducer,
+        state = EpisodeState(
+            lastrecord = TimeRecord(NaN, 0.0*u"kg/hr"), 
+            startvalue = 5.0*u"kg/hr", 
+            stopvalue = 5.0*u"kg/hr", 
+            totalizer = 0.0u"kg"
+        )
+    )
+
+    ts = TimeSeries([
+        TimeRecord(0, 0u"kg/hr"),
+        TimeRecord(1, 0u"kg/hr"),
+        TimeRecord(2, 6u"kg/hr"),
+        TimeRecord(3602, 0u"kg/hr"),
+        TimeRecord(3603, 8u"kg/hr"),
+        TimeRecord(7203, 0u"kg/hr")
+    ])
+
+    episodes = build_episodes(builder, ts)
+    @test length(episodes) == 2
+    @test episodes[1][1] == TimeInterval(2, 3602)
+    @test episodes[1][2] == 6u"kg"
+    @test episodes[2][1] == TimeInterval(3603, 7203)
+    @test episodes[2][2] == 8u"kg"
+end
 
 @testset "TimeSeriesCollector" begin
     function as_tagged_series(d::Dict{String, TimeSeries{T}}) where T

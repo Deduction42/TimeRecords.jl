@@ -22,20 +22,20 @@ For multivariate observations, the recommended DataType for each element is `SVe
  - Integration and averaging also requires supporting the method `zero(T)` which is why `Vector` may not be a great element choice
 
 This package also includes a capstone datatype called `TimeSeriesCollector` which can be used to collect streaming data, organize it by label, and periodically send it as chunks to any function/algorithm with the following argument structure: 
-```
+```julia
 f(data::Dict{String,TimeSeries{T}}, interval::TimeInterval) where T
 ```
 This provides a convenient way to implement timeseries algorithms that interact with a message-based service like [MQTT](https://github.com/denglerchr/Mosquitto.jl) or [NATS](https://github.com/jakubwro/NATS.jl).
 
 ## TimeRecord
-```
+```julia
 struct TimeRecord{T} <: AbstractTimeRecord{T}
     t :: Float64
     v :: T
 end
 ```
 A wrapper that attaches a unix timestap to a value. Timestamps are stored internally as Float64 (enabling faster and easier numeric computations like intergrals) but are displayed as DateTime.
-```
+```julia
 julia> tr = TimeRecord(0, 1.1)
 TimeRecord{Float64}(t=1970-01-01T00:00:00, v=1.1)
 
@@ -43,7 +43,7 @@ julia> tr = TimeRecord(DateTime(2014, 09, 15), "Here's a random date")
 TimeRecord{String}(t=2014-09-15T00:00:00, v="Here's a random date")
 ```
 You can retrieve timestamps using `timestamp(tr)` or `datetime(tr)`
-```
+```julia
 julia> timestamp(tr)
 1.4107392e9
 
@@ -51,14 +51,14 @@ julia> datetime(tr)
 2014-09-15T00:00:00
 ```
 values are retrieved using `value(tr)`
-```
+```julia
 julia> value(tr)
 "Here's a random date"
 ```
 
 ## TimeInterval
 An object which stores two timestamps as a sorted vector. This is useful for integrals or queries on timestamps. Constructors can use either Real or DateTime as inputs.
-```
+```julia
 julia> dt = TimeInterval(0, 5); dt = TimeInterval(0=>5)
 1970-01-01T00:00:00 => 1970-01-01T00:00:05
 ```
@@ -66,7 +66,7 @@ julia> dt = TimeInterval(0, 5); dt = TimeInterval(0=>5)
 ## TimeSeries
 A vector of time records in chronological order, which among other things, supports indexing using time intervals.
 
-```
+```julia
 julia> ts = TimeSeries([1,2,3,4,5],[1,2,3,4,5])
 5-element TimeSeries{Int64}:
     TimeRecord{Int64}(t=1970-01-01T00:00:01, v=1)
@@ -90,7 +90,7 @@ Some additional notes on TimeSeries and its chronological API
 -  `records(ts::AbstractTimeSeries)` will return the internal timeseries vector, but care must be taken with mutation in order to prevent violating the inherent chronological assumptions of the TimeSeries
 
 This package also includes a plotting recipe to plot timeseries as `(timestamp.(ts), value.(ts))` pairs, making it convenient to plot time series and even subsections over intervals
-```
+```julia
 using Plots
 plot(ts)
 dt = TimeInterval(DateTime("1970-01-01T00:00:01") => DateTime("1970-01-01T00:00:03"))
@@ -100,7 +100,7 @@ plot(ts[dt])
 ## RegularTimeSeries
 A StepRangeLen of timestamps paired with a vector of values. This different internal storage makes calling `timestamps(ts::RegularTimeSeries)` and `values(ts::RegularTimeSeries)` more efficient than it is for `TimeSeries`. Indexing by time range is also much much more efficient as indices can be calculated due to uniform timestamp assumptions. Due to timestamps being a range, operations that mutate timestamps are not allowed (such as `push`). However, operations that only mutate values are still valid (such as `setindex!` for values only, or time records with the same timestamp).
 
-```
+```julia
 julia> ts = RegularTimeSeries(1:5,[1,2,3,4,5])
 5-element RegularTimeSeries{Int64}:
  TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
@@ -119,7 +119,7 @@ julia> ts[TimeInterval(0=>3.1)]
 ```
 
 A convenience method `timeseries` can be used to construct the optimal timeseries type given the arguments
-```
+```julia
 julia> timeseries(1:2, 1:2)
 2-element RegularTimeSeries{Int64}:
  TimeRecord{Int64}(t="1970-01-01T00:00:01", v=1)
@@ -166,7 +166,7 @@ and re-use indhint for every subsequent evaluation. This allows the integration 
 ## Converting TimeSeries to RegularTimeSeries
 One common use for interpolation/averaging is converting irregular timeseries to regularized form. RegularTimeSeries contains a convenience constructor for this purpose, using many of the same keyword arguments from the interpolation and averaging functions. When averaging, do note that the average is taken on the time interval *before* the timestamp so as not to potentially pollute the time record with *future information*.
 
-```
+```julia
 julia> ts = TimeSeries(1:5, 1.0:5.0);
 julia> RegularTimeSeries(ts, 1.5:4.5, method=:interpolate, order=1)
 4-element RegularTimeSeries{Float64}:
@@ -181,6 +181,76 @@ julia> RegularTimeSeries(ts, 1.5:4.5, method=:average, order=0)
  TimeRecord{Float64}(t="1970-01-01T00:00:02.500", v=1.5)
  TimeRecord{Float64}(t="1970-01-01T00:00:03.500", v=2.5)
  TimeRecord{Float64}(t="1970-01-01T00:00:04.500", v=3.5)
+```
+
+## EpisodeBuilder
+A common task for industrial timeseries analysis is identifying time periods where a certain condition is met and reporting aggregations (such as total sum, or maximum). These flagged time periods are often referred to as episodes. This package comes with tooling to make that process a bit easier. The first major object is the EpisodeBuilder:
+```julia
+@kwdef struct EpisodeBuilder{F1,F2,T<:AbstractEpisodeState}
+    starter :: F1
+    reducer :: F2
+    state :: T
+    start :: Base.RefValue{Float64} = Ref(NaN)
+end
+```
+Within this object, an episode state is required; this is because the episode builder is meant to run by feeding it one record at a time, not inspecting the entire timeseries (as this is not possible for streaming, or PubSub applications). The default state is shown below:
+```julia
+@kwdef mutable struct EpisodeState{S,T} <: AbstractEpisodeState{S}
+    totalizer  :: S
+    lastrecord :: TimeRecord{T}
+    startvalue :: T 
+    stopvalue  :: T
+end
+```
+One may wish to extend this with custom states, for example, if one wants to store more than one previous record at a time. However, this default is suitable for most applications, including ones that apply Julia's own reduce functions like `max`, `min`, or simple integrals.
+
+The idea behind the `starter` function is to trigger the `reducer` once a start start criterion is met. This starter function analyzes a time record for a condition, and if the condition is met, sets the start value to the current timestamp, initializes the state, and returns the state value (instead of `nothing`). An episode is consider `started` when the `start` field is not `NaN`. An example of a starter function can be found here (this very function can be imported if desired)
+```julia
+function sum_above_starter(state::EpisodeState, r::TimeRecord)
+    if value(r) > state.startvalue
+        state.lastrecord = r 
+        state.totalizer = zero(state.totalizer)
+        return state.totalizer
+    end 
+    return nothing
+end
+```
+The idea behind the `reducer` function is to tally the results once an episode has started. Once it has finished, the final result of the totalizer is returned (instead of `nothing`).
+```julia
+function sum_above_reducer(state::EpisodeState, r::TimeRecord)
+    state.totalizer += integrate(state.lastrecord, r, order=0)
+    state.lastrecord = r 
+    return (value(r) < state.stopvalue) ? state.totalizer : nothing
+end
+```
+In both cases, it's important to return `nothing` when no change in state is required, and that you return `state.totalizer` (or your custom state's equivalent) when a change in status is desired (such as starting/stopping). Higher-order functions in `build_episodes` will handle the status flag (which is inferred based on whether or not `start` is `NaN`). With this in mind, we can assemble the whole episode builder with the following code example (that includes units of measure from FlexUnits.jl):
+
+```julia
+using FlexUnits, .UnitRegistry
+builder = EpisodeBuilder(
+    starter = TimeRecords.sum_above_starter,
+    reducer = TimeRecords.sum_above_reducer,
+    state = EpisodeState(
+        lastrecord = TimeRecord(NaN, 0.0*u"kg/hr"), 
+        startvalue = 5.0*u"kg/hr", 
+        stopvalue = 5.0*u"kg/hr", 
+        totalizer = 0.0u"kg"
+    )
+)
+
+ts = TimeSeries([
+    TimeRecord(0, 0u"kg/hr"),
+    TimeRecord(1, 0u"kg/hr"),
+    TimeRecord(2, 6u"kg/hr"),
+    TimeRecord(3602, 0u"kg/hr"),
+    TimeRecord(3603, 8u"kg/hr"),
+    TimeRecord(7203, 0u"kg/hr")
+])
+
+julia> episodes = build_episodes(builder, ts)
+2-element Vector{Pair{TimeInterval, Quantity{Float64, StaticDims{kg}}}}:
+ 2020-01-01T00:00:02 => 2020-01-01T01:00:02 => 6.0 kg
+ 2020-01-01T01:00:03 => 2020-01-01T02:00:03 => 8.0 kg
 ```
 
 ## TimeSeriesCollector
