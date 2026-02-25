@@ -469,6 +469,9 @@ end
     @test episodes[1][2] == 6u"kg"
     @test episodes[2][1] == TimeInterval(3603, 7203)
     @test episodes[2][2] == 8u"kg"
+    @test average(ts, TimeInterval(2, 3602)) ≈ 6u"kg/hr"
+    @test average(ts, TimeInterval(2, 2)) ≈ 6u"kg/hr"
+    @test integrate(ts, TimeInterval(2, 3602)) ≈ 6u"kg"
 end
 
 @testset "TimeSeriesCollector" begin

@@ -3,7 +3,7 @@ module FlexUnitsExt
 import TimeRecords
 import FlexUnits
 
-import TimeRecords: AbstractTimeSeries, TimeRecord, TimeInterval, value, timestamp, apply2values
+import TimeRecords: AbstractTimeSeries, TimeRecord, TimeInterval, value, timestamp, apply2values, integrate, interpolate, average
 import FlexUnits: QuantUnion, AbstractUnits, AbstractDimensions, StaticDims, dstrip, dimension
 
 #Time dimension is a special unit with unique pertinence to TimeRecords
