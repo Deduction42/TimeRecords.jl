@@ -32,7 +32,7 @@ end
 TimeSeriesCollector(interval, delay, timer, data::AbstractDict{<:AbstractString, TimeSeries{T}}) where T = TimeSeriesCollector{T}(interval, delay, timer, data)
 
 """
-apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}) :: Union{Nothing, Task}
+apply!(f, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}) :: Union{Nothing, Task}
 
 Use apply!(collector, timestamp(tagrecord[2])) :: Union{Nothing, NamedTuple{snapshot<:Dict, interval::TimeInterval}}
  -  If data is returned (i.e. not 'nothing') collector.data before collector.timer[] will be deleted
@@ -43,7 +43,7 @@ Notes:
  -  The function f must accept two arguments: (data::Dict{String,<:TimeSereis}, interval::TimeInterval)
  -  'interval' will be contained inside 'data' allowing for any desired interpolation scheme
 """
-function apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}; warn_mismatch=false)
+function apply!(f, collector::TimeSeriesCollector, tagrecord::Pair{<:String, <:TimeRecord}; warn_mismatch=false)
     data = apply!(collector, tagrecord, warn_mismatch=warn_mismatch)
     if isnothing(data)
         return nothing
@@ -53,7 +53,7 @@ function apply!(f::Function, collector::TimeSeriesCollector, tagrecord::Pair{<:S
 end
 
 """
-apply!(f::Function, collector::TimeSeriesCollector, t::DateTime) :: Union{Nothing, Task}
+apply!(f, collector::TimeSeriesCollector, t::DateTime) :: Union{Nothing, Task}
 
 Uses take!(collector, t) :: Union{Nothing, NamedTuple{snapshot<:Dict, interval::TimeInterval}}
  -  If data is returned (i.e. not 'nothing') collector.data before collector.timer[] will be deleted
@@ -63,8 +63,7 @@ Notes:
  -  The function f must accept two arguments: (data::Dict{String,<:TimeSereis}, interval::TimeInterval)
  -  'interval' will be contained inside 'data' allowing for any desired interpolation scheme
 """
-
-function apply!(f::Function, collector::TimeSeriesCollector, t::DateTime)
+function apply!(f, collector::TimeSeriesCollector, t::DateTime)
     data = take!(collector, t)
     if isnothing(data)
         return nothing
