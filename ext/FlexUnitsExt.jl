@@ -6,17 +6,22 @@ import FlexUnits
 import TimeRecords: AbstractTimeSeries, TimeRecord, TimeInterval, value, timestamp, apply2values, integrate, interpolate, average
 import FlexUnits: QuantUnion, AbstractUnits, AbstractDimensions, StaticDims, dstrip, dimension
 
-#Time dimension is a special unit with unique pertinence to TimeRecords
-time_dimension(x) = time_dimension(typeof(x))
-time_dimension(::Type{Q}) where {U, Q <: QuantUnion{<:Any,U}} = time_dimension(U)
-time_dimension(::Type{U}) where {D, U <: AbstractUnits{D}} = time_dimension(D)
-time_dimension(::Type{D}) where {D <: AbstractDimensions} = D(time=1)
-time_dimension(::Type{StaticDims{d}}) where {d} = StaticDims{time_dimension(d)}()
-time_dimension(::Type{T}) where T = error("time_dimension not defined for type $(T)")
+#Obtain the "seconds" unit for a given dimension type as timestamps are in seconds
+seconds_unit(x) = seconds_unit(typeof(x))
+seconds_unit(::Type{Q}) where {U, Q <: QuantUnion{<:Any,U}} = seconds_unit(U)
+seconds_unit(::Type{U}) where {D, U <: AbstractUnits{D}} = seconds_unit(D)
+seconds_unit(::Type{StaticDims{d}}) where {d} = StaticDims{seconds_unit(d)}()
+seconds_unit(::Type{T}) where T = error("time_dimension not defined for type $(T)")
+
+if pkgversion(FlexUnits) >= v"0.6.0"
+    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = D(s=1)
+else #Old versions of flex units were not explicit
+    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = D(time=1)
+end
 
 #Integration and averaging require special unit-aware versions (due to timestamps being in seconds)
 function TimeRecords.integrate(ts::AbstractTimeSeries{T}; order=0) where T <: QuantUnion
-    q0 = 0.0*time_dimension(T)
+    q0 = 0.0*seconds_unit(T)
     if isempty(ts)
         return zero(T)*q0
     end
@@ -33,14 +38,14 @@ function TimeRecords.average(ts::AbstractTimeSeries{T}, Δt::TimeInterval; indhi
     if iszero(dt) #Interval is zero, simply interpolate for the average (limit when dt -> 0)
         return interpolate(ts, Δt[begin], indhint=indhint, order=order)
     else
-        return integrate(ts, Δt, indhint=indhint, order=order)/(dt*time_dimension(T))
+        return integrate(ts, Δt, indhint=indhint, order=order)/(dt*seconds_unit(T))
     end
 end
 
 function quant_integral(integrator, rq1::TimeRecord{<:QuantUnion}, rq2::TimeRecord{<:QuantUnion})
     (r1, r2) = map(Base.Fix1(apply2values, dstrip), (rq1, rq2))
     d = FlexUnits.equaldims(dimension(value(rq1)), dimension(value(rq2)))
-    return integrator(r1, r2) * (d*time_dimension(d))
+    return integrator(r1, r2) * (d*seconds_unit(d))
 end
 
 function TimeRecords.lastval_integral(rq1::TimeRecord{<:QuantUnion}, rq2::TimeRecord{<:QuantUnion})
