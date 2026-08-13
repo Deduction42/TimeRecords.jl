@@ -1,15 +1,42 @@
 ToDo:
 
-v2.2.1 Add "timestamp", "unixtime" and "datetime" methods to "TimeInterval"
-    - Return "Pair" value
+1: Add calculated tags
+    First: define a TagCalculator struct
+    @kwdef struct TagCalculator{F<:Function, IN<:NamedTuple} 
+        tag :: String
+        inputs :: IN, #NamedTuple of AggregatorSpec
+        calculation :: F #function that takes only a named tuple
+    end
 
-v2.1.1 Add filtering functions
+    Second: define an AggregatorSpec struct 
+    @kwdef struct AggregatorSpec
+        tag :: String 
+        strategy :: Symbol #(:interpolate, :average, :integrate) 
+        order :: Int #(0, 1)
+        indhint :: RefValue{Int} = Ref(0)
+    end
+
+    Third: define a "_build_inputs(tagdict, itp::AggregatorSpec, dt::TimeInterval)" function for NamedTuple{argnames, <:NTuple{N, AggregatorSpec}}
+    -   Simply use interpolation to create a NamedTuple from the TimeSeries dict
+
+    Fourth: define an "add_calculated_tags!(tsdict, calc::TagCalculator, delimiter="/") that
+    -   Consolidates timestamps for all tags and for each time interval
+        -   Applies "_build_inputs"
+        -   Applies the "calculation" 
+        -   Appends the timeseries with a new value 
+    -   Finally it adds the calculated tags to the dictionary
+        -   If calculation results are a timeseries of "NamedTuple" 
+            -   Reconstruct timeseries for each NamedTuple field
+            -   Add each timeseries under the name "tag"*delimiter*string(fn)
+        
+
+2: Add filtering functions
     - First-order lowpass filter 
     - First-order detrender (forgetful sum of diff)
     - double-filter for no phase lag
 
 
-v2.1.2 Add documentation
+3: Add documentation
 
 
 Plot Recipe notes (in case of improvements):
