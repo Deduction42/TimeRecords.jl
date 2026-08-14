@@ -1,15 +1,17 @@
+Changelog:
+-   Added `CalculatedTag` feature
+-   Added a more efficient `timestam_union` impelementation 
+
 ToDo:
+1: Add calculated tags
 
-v2.2.1 Add "timestamp", "unixtime" and "datetime" methods to "TimeInterval"
-    - Return "Pair" value
-
-v2.1.1 Add filtering functions
+2: Add filtering functions
     - First-order lowpass filter 
     - First-order detrender (forgetful sum of diff)
     - double-filter for no phase lag
 
 
-v2.1.2 Add documentation
+3: Add documentation
 
 
 Plot Recipe notes (in case of improvements):

@@ -183,6 +183,92 @@ julia> RegularTimeSeries(ts, 1.5:4.5, method=:average, order=0)
  TimeRecord{Float64}(t="1970-01-01T00:00:04.500", v=3.5)
 ```
 
+## Calculated Tags
+Industrial historians often give you the ability to create new timeseries based on simple calculations from other timeseries inputs. This is commonly referred to as a calculated tag and is a useful feature for one-off calculations for a specific site. While this is a simple exercise if all of the tags have the same timestamps, it can be a challenge when they don't. This package gives you the ability to easily construct calculated tags based on common aggregation strategies to line up the timestamps.
+
+```julia
+#Timestamps don't need to be lined up, but we do this here for easy validation
+original = Dict(
+    "tag1" => TimeSeries(1:10, 1.0:10.0),
+    "tag2" => TimeSeries(1:10, 0.0:9.0),
+    "tag3" => TimeSeries(1:10, 2.0:11.0)
+)
+
+#Create a tuple of different calculated tags (tuples are required due to different functions)
+calctags = (
+    CalculatedTag(
+        name = "max",
+        #Aggregators are a NamedTuple, used to create a similar NamedTuple to be used in the calculation
+        aggregators = (
+            #Order is 0 by default (hold last value), but can be set to 1 (linear)
+            a = Aggregator(tag="tag1", strategy=:interpolate, order=1), 
+            b = Aggregator(tag="tag2", strategy=:interpolate, order=1),
+            c = Aggregator(tag="tag3", strategy=:interpolate, order=1)
+        ),
+        #A calculation takes a single NamedTuple as an argument, with fields that line up with the aggregators above
+        calculation = x-> max(x.a, x.b, x.c)
+    ),
+    CalculatedTag(
+        name = "extrema",
+        aggregators = (
+            a = Aggregator(tag="tag1", strategy=:interpolate),
+            b = Aggregator(tag="tag2", strategy=:interpolate),
+            c = Aggregator(tag="tag3", strategy=:interpolate)
+        ),
+        #Multiple outputs are returned as NamedTuple, fields get appended to "name" with a "delimiter" option
+        calculation = x-> (min = min(x.a, x.b, x.c), max = max(x.a, x.b, x.c)) 
+    ),
+    CalculatedTag(
+        name = "mean",
+        #Different strategies can be applied for an aggregator: {:interpolate, :average, :integrate}
+        aggregators = (
+            a = Aggregator(tag="tag1", strategy=:average),
+            b = Aggregator(tag="tag2", strategy=:average),
+            c = Aggregator(tag="tag3", strategy=:average)
+        ),
+        calculation = x-> (x.a + x.b + x.c)/3
+    ),
+    CalculatedTag(
+        name = "sum",
+        aggregators = (
+            a = Aggregator(tag="tag1", strategy=:integrate),
+            b = Aggregator(tag="tag2", strategy=:integrate),
+            c = Aggregator(tag="tag3", strategy=:integrate)
+        ),
+        calculation = x-> (x.a + x.b + x.c)
+    )
+)
+
+tsdict = copy(original) #Just to allow for experimenting with other strategies 
+
+#Using no timestamps as the argument will return a timeseries with the union of the input timestamps
+add_calculated_tags!(tsdict, calctags, delimiter=".")
+tsdict["extrema.max"] #Note that the delimiter is used here
+10-element TimeSeries{Float64}:
+ TimeRecord{Float64}(t="2020-01-01T00:00:01", v=2.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:02", v=3.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:03", v=4.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:04", v=5.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:05", v=6.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:06", v=7.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:07", v=8.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:08", v=9.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:09", v=10.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:10", v=11.0)
+
+#You can also specify the timestamps you want to use 
+add_calculated_tags!(tsdict, calctags, 1:0.2:2, delimiter=".")
+tsdict["max"]
+6-element TimeSeries{Float64}:
+ TimeRecord{Float64}(t="2020-01-01T00:00:01", v=2.0)
+ TimeRecord{Float64}(t="2020-01-01T00:00:01.200", v=2.2)
+ TimeRecord{Float64}(t="2020-01-01T00:00:01.400", v=2.4)
+ TimeRecord{Float64}(t="2020-01-01T00:00:01.600", v=2.6)
+ TimeRecord{Float64}(t="2020-01-01T00:00:01.800", v=2.8)
+ TimeRecord{Float64}(t="2020-01-01T00:00:02", v=3.0)
+```
+
+
 ## EpisodeBuilder
 A common task for industrial timeseries analysis is identifying time periods where a certain condition is met and reporting aggregations (such as total sum, or maximum). These flagged time periods are often referred to as episodes. This package comes with tooling to make that process a bit easier. The first major object is the EpisodeBuilder:
 ```julia

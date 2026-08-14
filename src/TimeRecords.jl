@@ -11,6 +11,7 @@ module TimeRecords
     include("aggregations.jl")
     include("episodes.jl")
     include("_TimeSeriesCollector.jl")
+    include("_CalculatedTag.jl")
 
     export AbstractTimeRecord, AbstractTimeSeries, TimeRecord, TimeInterval, TimeSeries, RegularTimeSeries, TimeSeriesCollector, timeseries
     export interpolate, strictinterp, average, integrate, aggregate, accumulate, records
@@ -19,5 +20,6 @@ module TimeRecords
     export initialhint, initialhint!, clampedbounds, keeplatest!, apply!
     export datetime2timestamp, timestamp2datetime
     export EpisodeBuilder, EpisodeState, build_episodes, add_episodes!
+    export CalculatedTag, Aggregator, add_calculated_tags!, add_calculated_tags
         
 end

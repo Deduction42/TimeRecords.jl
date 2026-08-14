@@ -474,6 +474,81 @@ end
     @test integrate(ts, TimeInterval(2, 3602)) ≈ 6u"kg"
 end
 
+@testset "Calculated Tags" begin 
+
+    original = Dict(
+        "tag1" => TimeSeries(1:10, 1.0:10.0),
+        "tag2" => TimeSeries(1:10, 0.0:9.0),
+        "tag3" => TimeSeries(1:10, 2.0:11.0)
+    )
+
+    calctags = (
+        CalculatedTag(
+            name = "max",
+            aggregators = (
+                a = Aggregator(tag="tag1", strategy=:interpolate),
+                b = Aggregator(tag="tag2", strategy=:interpolate),
+                c = Aggregator(tag="tag3", strategy=:interpolate)
+            ),
+            calculation = x-> max(x.a, x.b, x.c)
+        ),
+        CalculatedTag(
+            name = "extrema",
+            aggregators = (
+                a = Aggregator(tag="tag1", strategy=:interpolate),
+                b = Aggregator(tag="tag2", strategy=:interpolate),
+                c = Aggregator(tag="tag3", strategy=:interpolate)
+            ),
+            calculation = x-> (min = min(x.a, x.b, x.c), max = max(x.a, x.b, x.c))
+        ),
+        CalculatedTag(
+            name = "mean",
+            aggregators = (
+                a = Aggregator(tag="tag1", strategy=:average),
+                b = Aggregator(tag="tag2", strategy=:average),
+                c = Aggregator(tag="tag3", strategy=:average)
+            ),
+            calculation = x-> (x.a + x.b + x.c)/3
+        ),
+        CalculatedTag(
+            name = "sum",
+            aggregators = (
+                a = Aggregator(tag="tag1", strategy=:integrate),
+                b = Aggregator(tag="tag2", strategy=:integrate),
+                c = Aggregator(tag="tag3", strategy=:integrate)
+            ),
+            calculation = x-> (x.a + x.b + x.c)
+        )
+    )
+
+    
+    tsdict = add_calculated_tags(original, calctags, delimiter=".")
+    @test timestamps(tsdict["max"]) == timestamps(tsdict["tag1"])
+    @test values(tsdict["max"]) ≈ values(tsdict["tag3"])
+    @test values(tsdict["extrema.max"]) ≈ values(tsdict["tag3"])
+    @test values(tsdict["extrema.min"]) ≈ values(tsdict["tag2"])
+    @test values(tsdict["mean"]) ≈ values(tsdict["tag1"][[1;1:9]])
+    @test values(tsdict["sum"]) ≈ 3*values(tsdict["mean"])
+
+    vt = 1:0.5:10
+    tsdict = add_calculated_tags(original, calctags, vt, delimiter=".")
+    @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], vt)
+    @test values(tsdict["extrema.min"]) ≈ interpolate(tsdict["tag2"], vt)
+
+    vt = [1]
+    tsdict = add_calculated_tags(original, calctags, vt, delimiter=".")
+    @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], vt)
+    @test values(tsdict["extrema.min"]) ≈ interpolate(tsdict["tag2"], vt)
+    @test values(tsdict["mean"]) ≈ interpolate(tsdict["tag1"], vt)
+    @test values(tsdict["sum"]) ≈ [0.0]
+
+    vdt = [TimeInterval(1,2), TimeInterval(2,3)]
+    tsdict = add_calculated_tags(original, calctags, vdt, delimiter=".")
+    @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], 2:3)
+
+
+end
+
 @testset "TimeSeriesCollector" begin
     function as_tagged_series(d::Dict{String, TimeSeries{T}}) where T
         taggedrecord(tag::String, tr::TimeRecord) = TimeRecord(timestamp(tr), (k=tag, v=value(tr)))
