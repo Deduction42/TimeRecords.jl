@@ -20,6 +20,6 @@ module TimeRecords
     export initialhint, initialhint!, clampedbounds, keeplatest!, apply!
     export datetime2timestamp, timestamp2datetime
     export EpisodeBuilder, EpisodeState, build_episodes, add_episodes!
-    export CalculatedTag, Aggregator, add_calculated_tags!
+    export CalculatedTag, Aggregator, add_calculated_tags!, add_calculated_tags
         
 end

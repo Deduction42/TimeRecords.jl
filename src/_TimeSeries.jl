@@ -403,6 +403,15 @@ function Base.merge(ts1::AbstractTimeSeries, tsN::AbstractTimeSeries...; order=0
     return merge(timestamp_union(ts1, tsN...), ts1, tsN..., order=order)
 end
 
+
+"""
+Returns commmon timestamps for a set of AbstractTimeSeries
+"""
+function timestamp_union(ts::AbstractTimeSeries)
+    return timestamps(ts)
+end
+
+#=
 """
 Returns commmon timestamps for a collection of AbstractTimeSeries
 """
@@ -413,14 +422,27 @@ function timestamp_union(seriesitr)
     end
     return sort!(collect(tsunion)) 
 end
+=#
 
-"""
-Returns commmon timestamps for a set of AbstractTimeSeries
-"""
-function timestamp_union(vts::AbstractTimeSeries...)
-    return timestamp_union(vts)
+function timestamp_union(ts1::AbstractTimeSeries, tsN::AbstractTimeSeries...)
+    return _collect_timestamps!(timestamps(ts1), tsN...)
 end
 
+function _collect_timestamps!(vt::AbstractRange{<:Real}, vts::AbstractTimeSeries...)
+    return _collect_timestamps!(Vector(vt), vts...)
+end 
+
+function _collect_timestamps!(vt::Vector{<:Real}, vts::AbstractTimeSeries...)
+    sizehint!(vt, length(vt) + sum(length, vts))
+    for ts in vts
+        for tr in ts
+            push!(vt, timestamp(tr))
+        end
+    end
+    sort!(vt)
+    unique!(vt)
+    return vt 
+end
 
 #Recipe for plotting timeseries
 @recipe function f(ts::AbstractTimeSeries; use_dates=true)

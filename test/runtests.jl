@@ -521,8 +521,8 @@ end
         )
     )
 
-    tsdict = copy(original)
-    add_calculated_tags!(tsdict, calctags, delimiter=".")
+    
+    tsdict = add_calculated_tags(original, calctags, delimiter=".")
     @test timestamps(tsdict["max"]) == timestamps(tsdict["tag1"])
     @test values(tsdict["max"]) ≈ values(tsdict["tag3"])
     @test values(tsdict["extrema.max"]) ≈ values(tsdict["tag3"])
@@ -530,23 +530,20 @@ end
     @test values(tsdict["mean"]) ≈ values(tsdict["tag1"][[1;1:9]])
     @test values(tsdict["sum"]) ≈ 3*values(tsdict["mean"])
 
-    tsdict = copy(original)
     vt = 1:0.5:10
-    add_calculated_tags!(tsdict, calctags, vt, delimiter=".")
+    tsdict = add_calculated_tags(original, calctags, vt, delimiter=".")
     @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], vt)
     @test values(tsdict["extrema.min"]) ≈ interpolate(tsdict["tag2"], vt)
 
-    tsdict = copy(original)
     vt = [1]
-    add_calculated_tags!(tsdict, calctags, vt, delimiter=".")
+    tsdict = add_calculated_tags(original, calctags, vt, delimiter=".")
     @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], vt)
     @test values(tsdict["extrema.min"]) ≈ interpolate(tsdict["tag2"], vt)
     @test values(tsdict["mean"]) ≈ interpolate(tsdict["tag1"], vt)
     @test values(tsdict["sum"]) ≈ [0.0]
 
-    tsdict = copy(original)
     vdt = [TimeInterval(1,2), TimeInterval(2,3)]
-    add_calculated_tags!(tsdict, calctags, vdt, delimiter=".")
+    tsdict = add_calculated_tags(original, calctags, vdt, delimiter=".")
     @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], 2:3)
 
 

@@ -1,34 +1,9 @@
+Changelog:
+-   Added `CalculatedTag` feature
+-   Added a more efficient `timestam_union` impelementation 
+
 ToDo:
-
 1: Add calculated tags
-    First: define a TagCalculator struct
-    @kwdef struct TagCalculator{F<:Function, IN<:NamedTuple} 
-        tag :: String
-        inputs :: IN, #NamedTuple of AggregatorSpec
-        calculation :: F #function that takes only a named tuple
-    end
-
-    Second: define an AggregatorSpec struct 
-    @kwdef struct AggregatorSpec
-        tag :: String 
-        strategy :: Symbol #(:interpolate, :average, :integrate) 
-        order :: Int #(0, 1)
-        indhint :: RefValue{Int} = Ref(0)
-    end
-
-    Third: define a "_build_inputs(tagdict, itp::AggregatorSpec, dt::TimeInterval)" function for NamedTuple{argnames, <:NTuple{N, AggregatorSpec}}
-    -   Simply use interpolation to create a NamedTuple from the TimeSeries dict
-
-    Fourth: define an "add_calculated_tags!(tsdict, calc::TagCalculator, delimiter="/") that
-    -   Consolidates timestamps for all tags and for each time interval
-        -   Applies "_build_inputs"
-        -   Applies the "calculation" 
-        -   Appends the timeseries with a new value 
-    -   Finally it adds the calculated tags to the dictionary
-        -   If calculation results are a timeseries of "NamedTuple" 
-            -   Reconstruct timeseries for each NamedTuple field
-            -   Add each timeseries under the name "tag"*delimiter*string(fn)
-        
 
 2: Add filtering functions
     - First-order lowpass filter 

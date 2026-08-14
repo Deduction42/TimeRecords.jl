@@ -16,6 +16,18 @@ end
     end
 end
 
+function add_calculated_tags(tagsdict, calcs::Tuple; delimiter="/") 
+    newdict = copy(tagsdict)
+    add_calculated_tags!(newdict, calcs::Tuple; delimiter=delimiter)
+    return newdict 
+end
+
+function add_calculated_tags(tagsdict, calcs::Tuple, vt::AbstractVector; delimiter="/")
+    newdict = copy(tagsdict)
+    add_calculated_tags!(newdict, calcs::Tuple, vt; delimiter=delimiter)
+    return newdict 
+end
+
 function add_calculated_tags!(tagdict, calcs::Tuple; delimiter="/")
     for calc in calcs
         add_calculated_tags!(tagdict, calc, delimiter=delimiter)
