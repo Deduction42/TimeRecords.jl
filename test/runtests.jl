@@ -475,7 +475,6 @@ end
 end
 
 @testset "Calculated Tags" begin 
-    import TimeRecords: CalculatedTag, Aggregator, add_calculated_tags!
 
     original = Dict(
         "tag1" => TimeSeries(1:10, 1.0:10.0),
