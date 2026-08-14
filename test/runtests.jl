@@ -545,9 +545,9 @@ end
     @test values(tsdict["sum"]) ≈ [0.0]
 
     tsdict = copy(original)
-    vdt = [TimeInterval(0,1), TimeInterval(1,2)]
+    vdt = [TimeInterval(1,2), TimeInterval(2,3)]
     add_calculated_tags!(tsdict, calctags, vdt, delimiter=".")
-    @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], 1:2)
+    @test values(tsdict["max"]) ≈ interpolate(tsdict["tag3"], 2:3)
 
 
 end
