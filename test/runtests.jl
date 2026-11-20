@@ -3,8 +3,6 @@ using Test
 using StaticArrays
 using FlexUnits, .UnitRegistry
 using Dates
-using TestItems: @testitem
-using TestItemRunner
 using Plots
 using Aqua 
 
