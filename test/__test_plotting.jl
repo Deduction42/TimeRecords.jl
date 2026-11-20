@@ -1,10 +1,17 @@
 using Revise
-using Plots; pythonplot()
-PythonPlot.pygui(true)
+using Plots
+using TimeRecords
+using Dates
 
-includet(joinpath(@__DIR__, "TimeRecords.jl"))
-using .TimeRecords
+#Test problematic case where timestamps are close together but span a date 
+vt = DateTime(2026,01,01,23):Minute(1):DateTime(2026,01,02,2)
+vx = 0.1.*(1:length(vt))
+plot(TimeSeries(vt, vx))
 
+#Test case where timestamps are close together and in the same date 
+plot(TimeSeries(vt.- Hour(4), vx))
+
+#=
 N = 100
 
 #Build random samples to simulate highly non-uniform data
@@ -25,3 +32,4 @@ ts1 = time_averages(ts0, vt1, order=1)
 #The "resampled" series should approximate "raw", it may lag a bit due to integration error
 plot(datetime.(ts0), value.(ts0), label="raw")
 plot!(datetime.(ts1), value.(ts1), label="resampled")
+=#

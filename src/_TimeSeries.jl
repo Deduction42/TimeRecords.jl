@@ -449,13 +449,15 @@ end
     if !use_dates
         return (timestamps(ts), values(ts))
     else
-        xrot --> -10
+        xrot --> -10 #Rotate labels so that they don't collide
 
-        dt = diff(TimeInterval(ts))
-        if dt < 24*3600
-            return (Time.(datetime.(ts)), values(ts))
+        ds = datetimes(ts)
+        d0 = Date(ds[begin])
+
+        if all(x->Date(x)==d0, ds) #Check if all dates are the same, and just use times if so
+            return (Time.(ds), values(ts))
         else
-            return (datetimes(ts), values(ts))
+            return (ds, values(ts)) #Otherwise use DateTime directly
         end
     end
 end
