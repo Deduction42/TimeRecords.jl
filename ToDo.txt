@@ -1,10 +1,6 @@
-Bugfixes:
-
-1.  Interpolation fails if the timeseries has length of 1. It has something to do with findbounds 
-    -   Test this for integration/averaging as well
-2.  The if statement for plotting uses "all" to check if all dates are the same
-    -   But since timeseries are sorted, you only have to check if the beginning and end dates are the same 
-    -   This isn't a bug but it is an unneccessary performance penalty
+Changelog:
+1.  Fixed issue where interpolating RegularTimeSeries with length 1 resulted in errors
+2.  Fixed consistency issues when plotting short and long range timeseries together in one plot
 
 
 ToDo:
