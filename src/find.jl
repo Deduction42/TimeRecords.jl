@@ -156,6 +156,12 @@ function findbounds(ts::RegularTimeSeries, t::Real)
     i0 = firstindex(ts)
     iN = lastindex(ts)
 
+    if (i0==iN) #Shortcut methods if the timeeries only has one element
+        t < ts.timestamps[begin] && return (i0-1) => iN
+        t > ts.timestamps[end] && return i0 => (iN+1)
+        return i0 =>iN 
+    end
+
     relpos = (t - ts.timestamps[begin])/(ts.timestamps[end]-ts.timestamps[begin]) #Relative position on a scale of 0 => 1
     indpos = i0 + (iN-i0)*relpos #Continuous position on a scale of 1 => N
 

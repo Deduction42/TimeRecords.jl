@@ -3,8 +3,6 @@ using Test
 using StaticArrays
 using FlexUnits, .UnitRegistry
 using Dates
-using TestItems: @testitem
-using TestItemRunner
 using Plots
 using Aqua 
 
@@ -359,7 +357,14 @@ end
     @test TimeRecords.initialhint!(nothing, ts, 1.5)[] == 1
     @test TimeRecords.initialhint!(2, ts, 1.5)[] == 1
 
+    #Consistency in special case where the timeseries has one element
+    ts1 = RegularTimeSeries(0.0:0.0, 1.0:1.0)
+    ts2 = TimeSeries([TimeRecord(0.0, 1.0)])
 
+    for dt in [dt_before, dt_begin, dt_middle, dt_between, dt_after]
+        @test findinner(ts1, dt) == findinner(ts2, dt)
+        @test findouter(ts1, dt) == findouter(ts2, dt)
+    end
 end
 
 
@@ -438,6 +443,19 @@ end
     @test ts - ts == ts*0
     @test ts .* ts == ts.^2
     @test ts ./ ts == ts.^0
+
+    # Aggregation consistency between one-element regular and irregular timeseries 
+    ts1 = RegularTimeSeries(0.0:0.0, 1.0:1.0)
+    ts2 = TimeSeries([TimeRecord(0.0, 1.0)])
+
+    for dt in [TimeInterval(-2,-3), TimeInterval(-1,1), TimeInterval(1,2)]
+        @test interpolate(ts1, dt[begin], order=0) == interpolate(ts2, dt[begin], order=0)
+        @test interpolate(ts1, dt[begin], order=1) == interpolate(ts2, dt[begin], order=1)
+        @test average(ts1, dt, order=0) == average(ts2, dt, order=0)
+        @test average(ts1, dt, order=1) == average(ts2, dt, order=1)
+        @test integrate(ts1, dt, order=0) == integrate(ts2, dt, order=0)
+        @test integrate(ts1, dt, order=1) == integrate(ts2, dt, order=1)
+    end
 
 
 end    

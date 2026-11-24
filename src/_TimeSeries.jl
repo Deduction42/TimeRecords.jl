@@ -516,13 +516,7 @@ end
     if !use_dates
         return (timestamps(ts), values(ts))
     else
-        xrot --> -10
-
-        dt = diff(TimeInterval(ts))
-        if dt < 24*3600
-            return (Time.(datetime.(ts)), values(ts))
-        else
-            return (datetimes(ts), values(ts))
-        end
+        xrot --> -10 #Rotate labels so that they don't collide
+        return (datetimes(ts), values(ts))
     end
 end
