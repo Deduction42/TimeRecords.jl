@@ -359,7 +359,7 @@ controlled by the `padding` parameter. For example:
 ```
 keeps all data before time `t`, with two additional points after it.
 """
-function keepbefore!(ts::AbstractTimeSeries, t::Real, padding=0)
+function keepbefore!(ts::AbstractTimeSeries, t::Real; padding=0)
     isempty(ts) && return ts
     indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
     return typeof(ts)(keepat!(records(ts), indkeep))
@@ -376,7 +376,7 @@ controlled by the `padding` parameter. For example:
 keeps all data before time `t`, with two additional points after it. This function only mutates only the values, not the timestamps. You will need
 to use the resturn value.
 """
-function keepbefore!(ts::AbstractRegularTimeSeries, t::Real, padding=0)
+function keepbefore!(ts::AbstractRegularTimeSeries, t::Real; padding=0)
     isempty(ts) && return ts 
     indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
     return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
@@ -392,7 +392,7 @@ controlled by the `padding` parameter. For example:
 ```
 keeps all data after time `t`, with two additional points before it.
 """
-function keepafter!(ts::AbstractTimeSeries, t::Real, padding=0)
+function keepafter!(ts::AbstractTimeSeries, t::Real; padding=0)
     isempty(ts) && return ts
     indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
     return typeof(ts)(keepat!(records(ts), indkeep))
@@ -409,7 +409,7 @@ controlled by the `padding` parameter. For example:
 keeps all data after time `t`, with two additional points before it. This function only mutates only the values, not the timestamps. You will need
 to use the resturn value.
 """
-function keepafter!(ts::AbstractRegularTimeSeries, t::Real, padding=0)
+function keepafter!(ts::AbstractRegularTimeSeries, t::Real; padding=0)
     isempty(ts) && return ts
     indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
     return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))

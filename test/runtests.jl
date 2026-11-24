@@ -93,12 +93,36 @@ end
     @test value.(mapvalues(sin, ts)) ≈ sin.(value.(ts))
     @test value.(mapvalues!(sin, mapvalues(Float64, ts))) ≈ sin.(value.(ts))
     
-    #Test keeplatest
+    #Test keeplatest/keepbefore/keepafter
     @test keeplatest!(TimeSeries(1:5,1:5), 4) == TimeSeries(4:5, 4:5) 
     @test keeplatest!(TimeSeries(1:5,1:5), 2.5) == TimeSeries(2:5, 2:5) 
     @test keeplatest!(TimeSeries(1:5,1:5)) == TimeSeries([5],[5])
     @test keeplatest!(TimeSeries{Float64}()) == TimeSeries{Float64}()
     @test keeplatest!(TimeSeries{Float64}(), 4) == TimeSeries{Float64}()
+
+    @test keepafter!(TimeSeries(1:5,1:5), 4, padding=0) == TimeSeries(4:5, 4:5) 
+    @test keepafter!(TimeSeries(1:5,1:5), 4, padding=1) == TimeSeries(3:5, 3:5) 
+    @test keepafter!(TimeSeries(1:5,1:5), 2.5, padding=0) == TimeSeries(3:5, 3:5)
+    @test keepafter!(TimeSeries(1:5,1:5), 2.5, padding=1) == TimeSeries(2:5, 2:5)
+    @test keepafter!(TimeSeries{Float64}(), 2.5, padding=1) == TimeSeries{Float64}()
+
+    @test keepafter!(RegularTimeSeries(1:5,1:5), 4, padding=0) == RegularTimeSeries(4:5, 4:5) 
+    @test keepafter!(RegularTimeSeries(1:5,1:5), 4, padding=1) == RegularTimeSeries(3:5, 3:5) 
+    @test keepafter!(RegularTimeSeries(1:5,1:5), 2.5, padding=0) == RegularTimeSeries(3:5, 3:5)
+    @test keepafter!(RegularTimeSeries(1:5,1:5), 2.5, padding=1) == RegularTimeSeries(2:5, 2:5)
+    @test keepafter!(RegularTimeSeries{Float64}(2:1, Float64[]), 2.5, padding=1) == RegularTimeSeries{Float64}(2:1, Float64[])
+
+    @test keepbefore!(TimeSeries(1:5,1:5), 4, padding=0) == TimeSeries(1:4, 1:4) 
+    @test keepbefore!(TimeSeries(1:5,1:5), 4, padding=1) == TimeSeries(1:5, 1:5) 
+    @test keepbefore!(TimeSeries(1:5,1:5), 2.5, padding=0) == TimeSeries(1:2, 1:2)
+    @test keepbefore!(TimeSeries(1:5,1:5), 2.5, padding=1) == TimeSeries(1:3, 1:3)
+    @test keepbefore!(TimeSeries{Float64}(), 2.5, padding=1) == TimeSeries{Float64}()
+
+    @test keepbefore!(RegularTimeSeries(1:5,1:5), 4, padding=0) == RegularTimeSeries(1:4, 1:4) 
+    @test keepbefore!(RegularTimeSeries(1:5,1:5), 4, padding=1) == RegularTimeSeries(1:5, 1:5) 
+    @test keepbefore!(RegularTimeSeries(1:5,1:5), 2.5, padding=0) == RegularTimeSeries(1:2, 1:2)
+    @test keepbefore!(RegularTimeSeries(1:5,1:5), 2.5, padding=1) == RegularTimeSeries(1:3, 1:3)
+    @test keepbefore!(RegularTimeSeries{Float64}(2:1, Float64[]), 2.5, padding=1) == RegularTimeSeries{Float64}(2:1, Float64[])
 
     ts = TimeSeries{Float64}(1:5, 1:5)
     
