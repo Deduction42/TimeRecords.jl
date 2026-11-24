@@ -350,6 +350,73 @@ keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2time
 
 
 """
+keepbefore!(ts::AbstractTimeSeries, t, padding=0)
+
+Returns a fully modified timeseries `ts` which keeps all records before `t`, plus additional items are kept (that violoate initial conditions)
+controlled by the `padding` parameter. For example:
+```
+    keepbefore!(ts::AbstractTimeSeries, t, padding=2)` 
+```
+keeps all data before time `t`, with two additional points after it.
+"""
+function keepbefore!(ts::AbstractTimeSeries, t::Real, padding=0)
+    isempty(ts) && return ts
+    indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
+    return typeof(ts)(keepat!(records(ts), indkeep))
+end
+
+"""
+keepbefore!(ts::AbstractRegularTimeSeries, t, padding=0)
+
+Returns a partially modified timeseries `ts` which keeps all records before `t`, plus additional items are kept (that violoate initial conditions)
+controlled by the `padding` parameter. For example:
+```
+    keepbefore!(ts::AbstractTimeSeries, t, padding=2)` 
+```
+keeps all data before time `t`, with two additional points after it. This function only mutates only the values, not the timestamps. You will need
+to use the resturn value.
+"""
+function keepbefore!(ts::AbstractRegularTimeSeries, t::Real, padding=0)
+    isempty(ts) && return ts 
+    indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
+    return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
+end
+
+"""
+keepafter!(ts::AbstractTimeSeries, t, padding=0)
+
+Returns a fully modified timeseries `ts` which keeps all records after `t`, plus additional items are kept (that violoate initial conditions)
+controlled by the `padding` parameter. For example:
+```
+    keepafter!(ts::AbstractTimeSeries, t, padding=2)` 
+```
+keeps all data after time `t`, with two additional points before it.
+"""
+function keepafter!(ts::AbstractTimeSeries, t::Real, padding=0)
+    isempty(ts) && return ts
+    indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
+    return typeof(ts)(keepat!(records(ts), indkeep))
+end
+
+"""
+keepafter!(ts::AbstractRegularTimeSeries, t, padding=0)
+
+Returns a partially modified timeseries `ts` which keeps all records after `t`, plus additional items are kept (that violoate initial conditions)
+controlled by the `padding` parameter. For example:
+```
+    keepafter!(ts::AbstractTimeSeries, t, padding=2)` 
+```
+keeps all data after time `t`, with two additional points before it. This function only mutates only the values, not the timestamps. You will need
+to use the resturn value.
+"""
+function keepafter!(ts::AbstractRegularTimeSeries, t::Real, padding=0)
+    isempty(ts) && return ts
+    indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
+    return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
+end
+
+
+"""
 mapvalues(f, ts::AbstractTimeSeries) -> TimeSeries
 
 Maps callable "f" to each of the values in a timeseries, returns a TimeSeries with the same timestamps but modified values

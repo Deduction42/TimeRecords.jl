@@ -17,7 +17,7 @@ module TimeRecords
     export interpolate, strictinterp, average, integrate, aggregate, accumulate, records
     export timestamp, timestamps, datetime, datetimes, unixtime, unixtimes, value, values, valuetype
     export dropnan!, dropnan, mapvalues, mapvalues!, getinner, getouter, viewinner, viewouter, findinner, findouter, findbounds
-    export initialhint, initialhint!, clampedbounds, keeplatest!, apply!
+    export initialhint, initialhint!, clampedbounds, keeplatest!, apply!, keepafter!, keepbefore!
     export datetime2timestamp, timestamp2datetime
     export EpisodeBuilder, EpisodeState, build_episodes, add_episodes!
     export CalculatedTag, Aggregator, add_calculated_tags!, add_calculated_tags
