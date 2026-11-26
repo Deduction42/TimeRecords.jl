@@ -364,6 +364,7 @@ function keepbefore!(ts::AbstractTimeSeries, t::Real; padding=0)
     indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
     return typeof(ts)(keepat!(records(ts), indkeep))
 end
+keepbefore!(ts::AbstractTimeSeries, t::DateTime; padding=0) = keepbefore!(ts, datetime2timestamp(t); padding=padding)
 
 """
 keepbefore!(ts::AbstractRegularTimeSeries, t, padding=0)
@@ -381,6 +382,7 @@ function keepbefore!(ts::AbstractRegularTimeSeries, t::Real; padding=0)
     indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
     return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
 end
+keepbefore!(ts::AbstractRegularTimeSeries, t::DateTime; padding=0) = keepbefore!(ts, datetime2timestamp(t); padding=padding)
 
 """
 keepafter!(ts::AbstractTimeSeries, t, padding=0)
@@ -397,6 +399,7 @@ function keepafter!(ts::AbstractTimeSeries, t::Real; padding=0)
     indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
     return typeof(ts)(keepat!(records(ts), indkeep))
 end
+keepafter!(ts::AbstractTimeSeries, t::DateTime; padding=0) = keepafter!(ts, datetime2timestamp(t); padding=padding)
 
 """
 keepafter!(ts::AbstractRegularTimeSeries, t, padding=0)
@@ -414,6 +417,7 @@ function keepafter!(ts::AbstractRegularTimeSeries, t::Real; padding=0)
     indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
     return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
 end
+keepafter!(ts::AbstractRegularTimeSeries, t::DateTime; padding=0) = keepafter!(ts, datetime2timestamp(t); padding=padding)
 
 
 """

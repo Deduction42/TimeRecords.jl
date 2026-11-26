@@ -119,7 +119,7 @@ function Base.take!(collector::TimeSeriesCollector, t::DateTime)
 
         #Delete unneeded data
         for v in values(collector.data)
-            keeplatest!(v, t1)
+            keepafter!(v, t1, padding=1)
         end
         return (snapshot=snapshot, interval=interval)
     else
