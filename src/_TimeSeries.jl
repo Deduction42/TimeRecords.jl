@@ -350,7 +350,7 @@ keeplatest!(ts::AbstractTimeSeries, t::DateTime) = keeplatest!(ts, datetime2time
 
 
 """
-keepbefore!(ts::AbstractTimeSeries, t, padding=0)
+keepbefore!(ts::AbstractTimeSeries, t; padding=0, exclusive=false)
 
 Returns a fully modified timeseries `ts` which keeps all records before `t`, plus additional items are kept (that violoate initial conditions)
 controlled by the `padding` parameter. For example:
@@ -359,12 +359,12 @@ controlled by the `padding` parameter. For example:
 ```
 keeps all data before time `t`, with two additional points after it.
 """
-function keepbefore!(ts::AbstractTimeSeries, t::Real; padding=0)
+function keepbefore!(ts::AbstractTimeSeries, t::Real; padding=0, exclusive=false)
     isempty(ts) && return ts
-    indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
+    indkeep = firstindex(ts):_cutoff_before(ts, t, padding=padding, exclusive=exclusive)
     return typeof(ts)(keepat!(records(ts), indkeep))
 end
-keepbefore!(ts::AbstractTimeSeries, t::DateTime; padding=0) = keepbefore!(ts, datetime2timestamp(t); padding=padding)
+keepbefore!(ts::AbstractTimeSeries, t::DateTime; padding=0, exclusive=false) = keepbefore!(ts, datetime2timestamp(t); padding=padding, exclusive=exclusive)
 
 """
 keepbefore!(ts::AbstractRegularTimeSeries, t, padding=0)
@@ -377,15 +377,14 @@ controlled by the `padding` parameter. For example:
 keeps all data before time `t`, with two additional points after it. This function only mutates only the values, not the timestamps. You will need
 to use the resturn value.
 """
-function keepbefore!(ts::AbstractRegularTimeSeries, t::Real; padding=0)
+function keepbefore!(ts::AbstractRegularTimeSeries, t::Real; padding=0, exclusive=false)
     isempty(ts) && return ts 
-    indkeep = firstindex(ts):(findbounds(ts, t)[begin] + padding)
+    indkeep = firstindex(ts):_cutoff_before(ts, t, padding=padding, exclusive=exclusive)
     return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
 end
-keepbefore!(ts::AbstractRegularTimeSeries, t::DateTime; padding=0) = keepbefore!(ts, datetime2timestamp(t); padding=padding)
 
 """
-keepafter!(ts::AbstractTimeSeries, t, padding=0)
+keepafter!(ts::AbstractTimeSeries, t; padding=0, exclusive=false)
 
 Returns a fully modified timeseries `ts` which keeps all records after `t`, plus additional items are kept (that violoate initial conditions)
 controlled by the `padding` parameter. For example:
@@ -394,15 +393,15 @@ controlled by the `padding` parameter. For example:
 ```
 keeps all data after time `t`, with two additional points before it.
 """
-function keepafter!(ts::AbstractTimeSeries, t::Real; padding=0)
+function keepafter!(ts::AbstractTimeSeries, t::Real; padding=0, exclusive=false)
     isempty(ts) && return ts
-    indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
+    indkeep = _cutoff_after(ts, t, padding=padding, exclusive=exclusive):lastindex(ts)
     return typeof(ts)(keepat!(records(ts), indkeep))
 end
-keepafter!(ts::AbstractTimeSeries, t::DateTime; padding=0) = keepafter!(ts, datetime2timestamp(t); padding=padding)
+keepafter!(ts::AbstractTimeSeries, t::DateTime; padding=0, exclusive=false) = keepafter!(ts, datetime2timestamp(t); padding=padding, exclusive=exclusive)
 
 """
-keepafter!(ts::AbstractRegularTimeSeries, t, padding=0)
+keepafter!(ts::AbstractRegularTimeSeries, t, padding=0, exclusive=false)
 
 Returns a partially modified timeseries `ts` which keeps all records after `t`, plus additional items are kept (that violoate initial conditions)
 controlled by the `padding` parameter. For example:
@@ -412,13 +411,11 @@ controlled by the `padding` parameter. For example:
 keeps all data after time `t`, with two additional points before it. This function only mutates only the values, not the timestamps. You will need
 to use the resturn value.
 """
-function keepafter!(ts::AbstractRegularTimeSeries, t::Real; padding=0)
+function keepafter!(ts::AbstractRegularTimeSeries, t::Real; padding=0, exclusive=false)
     isempty(ts) && return ts
-    indkeep = (findbounds(ts, t)[end] - padding):lastindex(ts)
+    indkeep = _cutoff_after(ts, t, padding=padding, exclusive=exclusive):lastindex(ts)
     return typeof(ts)(timestamps(ts)[indkeep], keepat!(values(ts), indkeep))
 end
-keepafter!(ts::AbstractRegularTimeSeries, t::DateTime; padding=0) = keepafter!(ts, datetime2timestamp(t); padding=padding)
-
 
 """
 mapvalues(f, ts::AbstractTimeSeries) -> TimeSeries
@@ -440,8 +437,6 @@ function mapvalues!(f, ts::AbstractTimeSeries)
     end
     return ts
 end
-
-
 
 # =======================================================================================
 # Merging functionality through extrapolation
@@ -515,7 +510,19 @@ function _collect_timestamps!(vt::Vector{<:Real}, vts::AbstractTimeSeries...)
     return vt 
 end
 
-#Recipe for plotting timeseries
+function _cutoff_before(ts::AbstractTimeSeries, t::Real; padding::Integer, exclusive::Bool)
+    cutoff = findbounds(ts, t)[begin]
+    return ifelse(exclusive & (cutoff==t), cutoff-1, cutoff) + padding 
+end
+
+function _cutoff_after(ts::AbstractTimeSeries, t::Real; padding::Integer, exclusive::Bool)
+    cutoff = findbounds(ts, t)[end]
+    return ifelse(exclusive & (cutoff==t), cutoff+1, cutoff) - padding 
+end
+
+# =======================================================================================
+# Recipe for plotting timeseries
+# =======================================================================================
 @recipe function f(ts::AbstractTimeSeries; use_dates=true)
     if !use_dates
         return (timestamps(ts), values(ts))
