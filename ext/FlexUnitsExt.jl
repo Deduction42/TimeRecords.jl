@@ -7,17 +7,21 @@ import TimeRecords: AbstractTimeSeries, TimeRecord, TimeInterval, value, timesta
 import FlexUnits: QuantUnion, AbstractUnits, AbstractDimensions, StaticDims, dstrip, dimension
 
 #Obtain the "seconds" unit for a given dimension type as timestamps are in seconds
-seconds_unit(x) = seconds_unit(typeof(x))
-seconds_unit(::Type{Q}) where {U, Q <: QuantUnion{<:Any,U}} = seconds_unit(U)
-seconds_unit(::Type{U}) where {D, U <: AbstractUnits{D}} = seconds_unit(D)
-seconds_unit(::Type{StaticDims{d}}) where {d} = StaticDims{seconds_unit(d)}()
-seconds_unit(::Type{T}) where T = error("time_dimension not defined for type $(T)")
-
-if pkgversion(FlexUnits) >= v"0.6.0"
-    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = D(s=1)
-else #Old versions of flex units were not explicit
-    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = D(time=1)
+if pkgversion(FlexUnits) < v"0.6.0" # Old versions of flex units were not explicit on seconds, only time
+    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = StaticDims{D(time=1)}()
+elseif pkgversion(FlexUnits) <= v"0.6.16" # Newer versions of of flex units were explicit on seconds as time
+    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = StaticDims{D(s=1)}()
+else # Newest version of FlexUnits has this function defined internally
+    seconds_unit(::Type{D}) where {D <: AbstractDimensions} = FlexUnits.seconds_unit(D)
 end
+
+seconds_unit(::Type{StaticDims{d}}) where {d} = seconds_unit(typeof(d))
+seconds_unit(::Type{U}) where {D, U <: AbstractUnits{D}} = seconds_unit(D)
+seconds_unit(::Type{Q}) where {U, Q <: QuantUnion{<:Any,U}} = seconds_unit(U)
+seconds_unit(::Type{T}) where T = error("time_dimension not defined for type $(T)")
+seconds_unit(x) = seconds_unit(typeof(x))
+
+
 
 #Integration and averaging require special unit-aware versions (due to timestamps being in seconds)
 function TimeRecords.integrate(ts::AbstractTimeSeries{T}; order=0) where T <: QuantUnion

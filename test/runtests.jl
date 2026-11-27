@@ -8,8 +8,8 @@ using Aqua
 
 #====================================================================================================================================
 Run these commands at startup to see coverage
-julia --startup-file=no --depwarn=yes --threads=auto -e 'using Coverage; clean_folder(\"src\"); clean_folder(\"test\")'
-julia --startup-file=no --depwarn=yes --threads=auto --code-coverage=user --project=. -e 'using Pkg; Pkg.test(coverage=true)'
+julia --startup-file=no --depwarn=yes --threads=auto -e 'using Coverage; clean_folder("src"); clean_folder("test"); clean_folder("ext")'
+julia --startup-file=no --depwarn=yes --threads=auto --project=. -e 'import Pkg; Pkg.test(coverage="user")'
 julia --startup-file=no --depwarn=yes --threads=auto coverage.jl
 ====================================================================================================================================#
 @testset "TimeRecord basics" begin
